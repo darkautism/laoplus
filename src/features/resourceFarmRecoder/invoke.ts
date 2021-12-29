@@ -1,7 +1,7 @@
 import { stageStart, stageStop, calcResource } from "./functions";
 import { InvokeProps, WaveClearResponse } from "../types";
 
-export const invoke = ({ res, url }: InvokeProps) => {
+export const invoke = async ({ res, url }: InvokeProps) => {
     switch (url.pathname) {
         case "/battleserver_enter":
             stageStart();

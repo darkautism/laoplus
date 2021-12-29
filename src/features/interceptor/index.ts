@@ -3,6 +3,8 @@ import { invoke as invokeExplorationTimer } from "../explorationTimer/invoke";
 import { invoke as invokeDropNotification } from "../dropNotification/invoke";
 import { invoke as invokeAutorunDetection } from "../autorunDetection/invoke";
 import { invoke as invokeResourceFarmRecoder } from "../resourceFarmRecoder/invoke";
+import { WaveClearResponse } from "../types";
+import { fakeEnemy, speedHack } from "../hacks/function";
 
 const interceptor = (xhr: XMLHttpRequest): void => {
     if (!xhr.responseURL) return;
@@ -48,4 +50,39 @@ export const initInterceptor = () => {
             open.apply(this, arguments);
         };
     })(XMLHttpRequest.prototype.open);
+    const accessor = Object.getOwnPropertyDescriptor(
+        XMLHttpRequest.prototype,
+        "response"
+    );
+    if (accessor) {
+        Object.defineProperty(XMLHttpRequest.prototype, "response", {
+            get: function () {
+                let response = accessor.get?.call(this);
+                try {
+                    const url = new URL(this.responseURL);
+                    if (url.host === "gate.last-origin.com") {                         
+                        const responseText = new TextDecoder("utf-8").decode(response);
+                        const res = JSON.parse(responseText);                       
+                        switch (url.pathname) {
+                            case "wave_clear":
+                                speedHack(res);
+                                response = new TextEncoder().encode( JSON.stringify(res) );
+                                break;
+                            case "battleserver_enter":
+                                fakeEnemy(res);
+                                response = new TextEncoder().encode( JSON.stringify(res) );
+                                break;
+                        }
+                    }
+                } catch (error) {
+                    log.error("Interceptor", "Error", error);
+                }
+                return response;
+            },
+            set: function (str) {
+                return accessor.set?.call(this, str);
+            },
+            configurable: true,
+        });
+    }
 };

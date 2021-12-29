@@ -2,7 +2,7 @@ import { cancel, enter, loginto, reward } from "./functions";
 import { InvokeProps } from "../types";
 
 // TODO: 型を用意してanyをキャストする
-export const invoke = ({ res, url }: InvokeProps) => {
+export const invoke = async ({ res, url }: InvokeProps) => {
     switch (url.pathname) {
         case "/exploration_inginfo":
             loginto(res as any);

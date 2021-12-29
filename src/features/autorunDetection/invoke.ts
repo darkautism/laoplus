@@ -1,7 +1,7 @@
 import { enter } from "./functions";
 import { InvokeProps } from "../types";
 
-export const invoke = ({ url }: InvokeProps) => {
+export const invoke = async ({ url }: InvokeProps) => {
     switch (url.pathname) {
         case "/battleserver_enter":
             if (
