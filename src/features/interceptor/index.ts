@@ -3,7 +3,6 @@ import { invoke as invokeExplorationTimer } from "../explorationTimer/invoke";
 import { invoke as invokeDropNotification } from "../dropNotification/invoke";
 import { invoke as invokeAutorunDetection } from "../autorunDetection/invoke";
 import { invoke as invokeResourceFarmRecoder } from "../resourceFarmRecoder/invoke";
-import { WaveClearResponse } from "../types";
 import { fakeEnemy, speedHack } from "../hacks/function";
 
 const interceptor = (xhr: XMLHttpRequest): void => {
@@ -13,8 +12,9 @@ const interceptor = (xhr: XMLHttpRequest): void => {
     if (url.host !== "gate.last-origin.com") {
         return;
     }
-
-    const responseText = new TextDecoder("utf-8").decode(xhr.response);
+    // @ts-ignore
+    const realresp = (xhr.response)?xhr._realresponse:xhr._realresponse;
+    const responseText = new TextDecoder("utf-8").decode(realresp);
     // JSONが不正なことがあるのでtry-catch
     try {
         const res = JSON.parse(responseText);
@@ -58,19 +58,18 @@ export const initInterceptor = () => {
         Object.defineProperty(XMLHttpRequest.prototype, "response", {
             get: function () {
                 let response = accessor.get?.call(this);
+                this._realresponse = response;
                 try {
                     const url = new URL(this.responseURL);
                     if (url.host === "gate.last-origin.com") {                         
                         const responseText = new TextDecoder("utf-8").decode(response);
                         const res = JSON.parse(responseText);                       
                         switch (url.pathname) {
-                            case "wave_clear":
-                                speedHack(res);
-                                response = new TextEncoder().encode( JSON.stringify(res) );
+                            case "/wave_clear":
+                                response = new TextEncoder().encode( JSON.stringify(speedHack(res)) );
                                 break;
-                            case "battleserver_enter":
-                                fakeEnemy(res);
-                                response = new TextEncoder().encode( JSON.stringify(res) );
+                            case "/battleserver_enter":
+                                response = new TextEncoder().encode( JSON.stringify(fakeEnemy(res)) );
                                 break;
                         }
                     }
