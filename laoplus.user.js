@@ -691,28 +691,29 @@
 
     const ResourceFarmer = () => {
         const status = unsafeWindow.LAOPLUS.status;
-        const [_stat, update] = React.useState();
-        const stat = _stat ?? {};
-        status.events.on("changed", () => {
-            update(status.status.resourceFarmRecoder);
+        const [stat, setStat] = React.useState(status.status.resourceFarmRecoder);
+        status.events.on("changed", (e) => {
+            setStat(() => ({ ...e.resourceFarmRecoder }));
         });
-        return (React.createElement("div", { className: "-translate-x-[50%] absolute inset-y-0 left-0 flex items-center text-white opacity-90 pointer-events-none select-none drop-shadow-lg" },
-            React.createElement("div", { className: "pl-[50%] absolute inset-0 flex items-center justify-center" },
-                "Rounds:",
+        const style = {
+            textShadow: "black 0.1em 0.1em 0.2em"
+        };
+        return (React.createElement("div", { className: "absolute top-0 left-0 w-1/2 px-3 ml-[5%]" },
+            React.createElement("div", { className: "text-white text-sm whitespace-nowrap", style: style },
+                "[",
                 stat.rounds,
-                ", Metal:",
-                stat.Metal / stat.rounds,
-                ", Nutrient:",
-                stat.Nutrient / stat.rounds,
-                ", Power:",
-                stat.Power / stat.rounds,
-                ", Normal_Module:",
-                stat.Normal_Module / stat.rounds,
-                ", Advanced_Module:",
-                stat.Advanced_Module / stat.rounds,
-                ", Special_Module:",
-                stat.Special_Module / stat.rounds,
-                ",")));
+                "] ",
+                stat.Metal,
+                "/",
+                stat.Nutrient,
+                "/",
+                stat.Power,
+                " - ",
+                stat.Normal_Module,
+                "/",
+                stat.Advanced_Module,
+                "/",
+                stat.Special_Module)));
     };
 
     const App = () => {
@@ -1035,6 +1036,7 @@
             status.set({
                 resourceFarmRecoder: {
                     endTime: curtime,
+                    rounds: rounds + 1,
                 },
             });
         }
