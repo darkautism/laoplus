@@ -1,5 +1,9 @@
 import { log } from "../utils/log";
+declare var UnityLoader: any;
 
+const sleep = async (ms:number) => {
+    return new Promise((r) => setTimeout(r, ms));
+};
 export const initGamePage = () => {
     GM_addStyle(`
     html, body {
@@ -16,4 +20,25 @@ export const initGamePage = () => {
     }`);
 
     log.log("Injection", "Game Page", "Style injected.");
+
+    if (UnityLoader) {
+        // Remove annoying uinity logs
+        let blob: { [index: string | symbol]: any } = {};
+        var blobProxy = new Proxy(blob, {
+            set: function (
+                target: { [index: string | symbol]: any },
+                key,
+                value
+            ) {
+                if (value.Module) {
+                    unsafeWindow.LAOPLUS.Module=value.Module;
+                    value.Module.print = () => {};
+                }
+                target[key] = value;
+                return true;
+            },
+        });
+        console.log(UnityLoader);
+        UnityLoader.Blobs = blobProxy;
+    }
 };

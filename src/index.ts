@@ -20,6 +20,7 @@ declare global {
                 locale: { [key: string]: string };
                 unit: TacticsManualUnit[];
             };
+            Module:any;
             exploration: ExplorationSquad[];
             status: Status;
         };
@@ -41,6 +42,7 @@ declare global {
             locale: {},
             unit: [],
         },
+        Module:undefined,
         exploration: [],
         status: status,
     };
