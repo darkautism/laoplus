@@ -238,12 +238,12 @@
             latestEnterTime: null,
         },
         resourceFarmRecoder: {
-            startTime: undefined,
-            waveTime: undefined,
-            endTime: undefined,
+            startTime: null,
+            waveTime: null,
+            endTime: null,
             totalWaitTime: 0,
             totalRoundTime: 0,
-            rounds: 0,
+            cycles: 0,
             Metal: 0,
             Nutrient: 0,
             Power: 0,
@@ -699,28 +699,84 @@ i.bi {
                 React.createElement(Timer, { targetDate: enterDate, className: "pt-[60%] rotate-90" }))));
     };
 
-    GM_addStyle(`
-.icon {
-  height: 16px;
-  width: 16px;
-  display: inline-block;
-  vertical-align: middle;
-}
-`);
-
-    function jsonEqual(a, b) {
-        return JSON.stringify(a) === JSON.stringify(b);
-    }
-    function resetRecoder() {
+    const PCDisassemblingTable = {
+        B: {
+            Metal: 5,
+            Nutrient: 5,
+            Power: 5,
+            Normal_Module: 5,
+            Advanced_Module: 0,
+            Special_Module: 0,
+        },
+        A: {
+            Metal: 25,
+            Nutrient: 25,
+            Power: 25,
+            Normal_Module: 25,
+            Advanced_Module: 3,
+            Special_Module: 0,
+        },
+        S: {
+            Metal: 50,
+            Nutrient: 50,
+            Power: 50,
+            Normal_Module: 50,
+            Advanced_Module: 10,
+            Special_Module: 1,
+        },
+        SS: {
+            Metal: 100,
+            Nutrient: 100,
+            Power: 100,
+            Normal_Module: 100,
+            Advanced_Module: 20,
+            Special_Module: 5,
+        },
+    };
+    const ItemDisassemblingTable = {
+        B: {
+            Metal: 3,
+            Nutrient: 0,
+            Power: 3,
+            Normal_Module: 1,
+            Advanced_Module: 0,
+            Special_Module: 0,
+        },
+        A: {
+            Metal: 5,
+            Nutrient: 0,
+            Power: 5,
+            Normal_Module: 3,
+            Advanced_Module: 1,
+            Special_Module: 0,
+        },
+        S: {
+            Metal: 10,
+            Nutrient: 0,
+            Power: 10,
+            Normal_Module: 5,
+            Advanced_Module: 2,
+            Special_Module: 0,
+        },
+        SS: {
+            Metal: 20,
+            Nutrient: 0,
+            Power: 20,
+            Normal_Module: 10,
+            Advanced_Module: 3,
+            Special_Module: 1,
+        },
+    };
+    const resetRecoder = () => {
         const status = unsafeWindow.LAOPLUS.status;
         status.set({
             resourceFarmRecoder: {
-                startTime: undefined,
-                waveTime: undefined,
-                endTime: undefined,
+                startTime: null,
+                waveTime: null,
+                endTime: null,
                 totalWaitTime: 0,
                 totalRoundTime: 0,
-                rounds: 0,
+                cycles: 0,
                 Metal: 0,
                 Nutrient: 0,
                 Power: 0,
@@ -729,6 +785,221 @@ i.bi {
                 Special_Module: 0,
             },
         });
+    };
+    const enter$2 = () => {
+        const status = unsafeWindow.LAOPLUS.status;
+        const curtime = new Date().getTime();
+        const { endTime, totalWaitTime } = status.status
+            .resourceFarmRecoder;
+        if (endTime) {
+            const waitTime = (curtime - endTime) / 1000;
+            status.set({
+                resourceFarmRecoder: {
+                    startTime: curtime,
+                    totalWaitTime: totalWaitTime + waitTime,
+                },
+            });
+        }
+        else {
+            status.set({
+                resourceFarmRecoder: {
+                    startTime: curtime,
+                },
+            });
+        }
+    };
+    const leave = () => {
+        const status = unsafeWindow.LAOPLUS.status;
+        const curtime = new Date().getTime();
+        const { waveTime, totalRoundTime, cycles } = status.status
+            .resourceFarmRecoder;
+        if (waveTime) {
+            const waitTime = (curtime - waveTime) / 1000;
+            status.set({
+                resourceFarmRecoder: {
+                    endTime: curtime,
+                    totalRoundTime: totalRoundTime + waitTime,
+                    cycles: cycles + 1,
+                },
+            });
+        }
+        else {
+            status.set({
+                resourceFarmRecoder: {
+                    endTime: curtime,
+                    cycles: cycles + 1,
+                },
+            });
+        }
+    };
+    const calcResource = (res) => {
+        const status = unsafeWindow.LAOPLUS.status;
+        // Get timer
+        const curtime = new Date().getTime();
+        const { startTime, waveTime, totalRoundTime } = status.status
+            .resourceFarmRecoder;
+        const newRoundTime = waveTime ?? startTime ?? undefined;
+        if (newRoundTime) {
+            const waitTime = (curtime - newRoundTime) / 1000;
+            status.set({
+                resourceFarmRecoder: {
+                    waveTime: curtime,
+                    totalRoundTime: totalRoundTime + waitTime,
+                },
+            });
+        }
+        else {
+            status.set({
+                resourceFarmRecoder: {
+                    waveTime: curtime,
+                },
+            });
+        }
+        // Get reward
+        const { cycles } = status.status.resourceFarmRecoder;
+        let { Metal, Nutrient, Power, Normal_Module, Advanced_Module, Special_Module, } = status.status.resourceFarmRecoder;
+        res.ClearRewardInfo.PCRewardList.forEach((pc) => {
+            switch (pc.Grade) {
+                case 2:
+                    Metal = Metal + PCDisassemblingTable["B"]["Metal"];
+                    Nutrient = Nutrient + PCDisassemblingTable["B"]["Nutrient"];
+                    Power = Power + PCDisassemblingTable["B"]["Power"];
+                    Normal_Module =
+                        Normal_Module + PCDisassemblingTable["B"]["Normal_Module"];
+                    Advanced_Module =
+                        Advanced_Module +
+                            PCDisassemblingTable["B"]["Advanced_Module"];
+                    Special_Module =
+                        Special_Module +
+                            PCDisassemblingTable["B"]["Special_Module"];
+                    break;
+                case 3:
+                    Metal = Metal + PCDisassemblingTable["A"]["Metal"];
+                    Nutrient = Nutrient + PCDisassemblingTable["A"]["Nutrient"];
+                    Power = Power + PCDisassemblingTable["A"]["Power"];
+                    Normal_Module =
+                        Normal_Module + PCDisassemblingTable["A"]["Normal_Module"];
+                    Advanced_Module =
+                        Advanced_Module +
+                            PCDisassemblingTable["A"]["Advanced_Module"];
+                    Special_Module =
+                        Special_Module +
+                            PCDisassemblingTable["A"]["Special_Module"];
+                    break;
+                case 4:
+                    Metal = Metal + PCDisassemblingTable["S"]["Metal"];
+                    Nutrient = Nutrient + PCDisassemblingTable["S"]["Nutrient"];
+                    Power = Power + PCDisassemblingTable["S"]["Power"];
+                    Normal_Module =
+                        Normal_Module + PCDisassemblingTable["S"]["Normal_Module"];
+                    Advanced_Module =
+                        Advanced_Module +
+                            PCDisassemblingTable["S"]["Advanced_Module"];
+                    Special_Module =
+                        Special_Module +
+                            PCDisassemblingTable["S"]["Special_Module"];
+                    break;
+                case 5:
+                    Metal = Metal + PCDisassemblingTable["SS"]["Metal"];
+                    Nutrient = Nutrient + PCDisassemblingTable["SS"]["Nutrient"];
+                    Power = Power + PCDisassemblingTable["SS"]["Power"];
+                    Normal_Module =
+                        Normal_Module + PCDisassemblingTable["SS"]["Normal_Module"];
+                    Advanced_Module =
+                        Advanced_Module +
+                            PCDisassemblingTable["SS"]["Advanced_Module"];
+                    Special_Module =
+                        Special_Module +
+                            PCDisassemblingTable["SS"]["Special_Module"];
+                    break;
+            }
+        });
+        res.ClearRewardInfo.ItemRewardList.forEach((item) => {
+            if (item.ItemKeyString.includes("T1")) {
+                Metal = Metal + ItemDisassemblingTable["B"]["Metal"];
+                Nutrient = Nutrient + ItemDisassemblingTable["B"]["Nutrient"];
+                Power = Power + ItemDisassemblingTable["B"]["Power"];
+                Normal_Module =
+                    Normal_Module + ItemDisassemblingTable["B"]["Normal_Module"];
+                Advanced_Module =
+                    Advanced_Module +
+                        ItemDisassemblingTable["B"]["Advanced_Module"];
+                Special_Module =
+                    Special_Module + ItemDisassemblingTable["B"]["Special_Module"];
+            }
+            else if (item.ItemKeyString.includes("T2")) {
+                Metal = Metal + ItemDisassemblingTable["A"]["Metal"];
+                Nutrient = Nutrient + ItemDisassemblingTable["A"]["Nutrient"];
+                Power = Power + ItemDisassemblingTable["A"]["Power"];
+                Normal_Module =
+                    Normal_Module + ItemDisassemblingTable["A"]["Normal_Module"];
+                Advanced_Module =
+                    Advanced_Module +
+                        ItemDisassemblingTable["A"]["Advanced_Module"];
+                Special_Module =
+                    Special_Module + ItemDisassemblingTable["A"]["Special_Module"];
+            }
+            else if (item.ItemKeyString.includes("T3")) {
+                Metal = Metal + ItemDisassemblingTable["S"]["Metal"];
+                Nutrient = Nutrient + ItemDisassemblingTable["S"]["Nutrient"];
+                Power = Power + ItemDisassemblingTable["S"]["Power"];
+                Normal_Module =
+                    Normal_Module + ItemDisassemblingTable["S"]["Normal_Module"];
+                Advanced_Module =
+                    Advanced_Module +
+                        ItemDisassemblingTable["S"]["Advanced_Module"];
+                Special_Module =
+                    Special_Module + ItemDisassemblingTable["S"]["Special_Module"];
+            }
+            else if (item.ItemKeyString.includes("T4")) {
+                Metal = Metal + ItemDisassemblingTable["SS"]["Metal"];
+                Nutrient = Nutrient + ItemDisassemblingTable["SS"]["Nutrient"];
+                Power = Power + ItemDisassemblingTable["SS"]["Power"];
+                Normal_Module =
+                    Normal_Module + ItemDisassemblingTable["SS"]["Normal_Module"];
+                Advanced_Module =
+                    Advanced_Module +
+                        ItemDisassemblingTable["SS"]["Advanced_Module"];
+                Special_Module =
+                    Special_Module + ItemDisassemblingTable["SS"]["Special_Module"];
+            }
+        });
+        log.debug("ResourceFarmRecorder", "Cycles:", cycles, "resources", { Metal, Nutrient, Power }, "modules", { Normal_Module, Advanced_Module, Special_Module });
+        status.set({
+            resourceFarmRecoder: {
+                Metal: Metal,
+                Nutrient: Nutrient,
+                Power: Power,
+                Normal_Module: Normal_Module,
+                Advanced_Module: Advanced_Module,
+                Special_Module: Special_Module,
+            },
+        });
+    };
+
+    const Icon = ({ type }) => {
+        const url = (() => {
+            const base = `https://cdn.laoplus.net/ui/`;
+            switch (type) {
+                case "metal":
+                    return base + "/currenncy/metal.png";
+                case "nutrient":
+                    return base + "/currenncy/nutrient.png";
+                case "power":
+                    return base + "/currenncy/power.png";
+                case "basic_module":
+                    return base + "/item/module/basic.png";
+                case "advanced_module":
+                    return base + "/item/module/advanced.png";
+                case "special_module":
+                    return base + "/item/module/special.png";
+            }
+        })();
+        return React.createElement("img", { className: "inline w-4 h-4 object-contain", src: url });
+    };
+
+    function jsonEqual(a, b) {
+        return JSON.stringify(a) === JSON.stringify(b);
     }
     function AdvanceWindow(props) {
         const isShow = props.isShow;
@@ -756,44 +1027,44 @@ i.bi {
                             React.createElement("th", null, "Total")),
                         React.createElement("tr", null,
                             React.createElement("th", null, "Round Time"),
-                            React.createElement("td", null, (recoder.totalRoundTime / recoder.rounds).toFixed(2)),
+                            React.createElement("td", null, (recoder.totalRoundTime / recoder.cycles).toFixed(2)),
                             React.createElement("td", null, recoder.totalRoundTime.toFixed(2))),
                         React.createElement("tr", null,
                             React.createElement("th", null, "Wait Time"),
-                            React.createElement("td", null, (recoder.totalWaitTime / recoder.rounds).toFixed(2)),
+                            React.createElement("td", null, (recoder.totalWaitTime / recoder.cycles).toFixed(2)),
                             React.createElement("td", null, recoder.totalWaitTime.toFixed(2))),
                         React.createElement("tr", null,
                             React.createElement("th", null, "Total Time"),
-                            React.createElement("td", null, (totalTime / recoder.rounds).toFixed(2)),
+                            React.createElement("td", null, (totalTime / recoder.cycles).toFixed(2)),
                             React.createElement("td", null, totalTime.toFixed(2))))),
                 React.createElement("p", null,
-                    React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/a/ab/Part_Icon.png" }),
+                    React.createElement(Icon, { type: "metal" }),
                     "per hour:",
                     " ",
                     ((recoder.Metal * numResearch * 3600) / totalTime).toFixed(2)),
                 React.createElement("p", null,
-                    React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/f/f4/Nutrient_Icon.png" }),
+                    React.createElement(Icon, { type: "nutrient" }),
                     "per hour:",
                     " ",
                     ((recoder.Nutrient * numResearch * 3600) /
                         totalTime).toFixed(2)),
                 React.createElement("p", null,
-                    React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/d/d0/Power_Icon.png" }),
+                    React.createElement(Icon, { type: "power" }),
                     "per hour:",
                     " ",
                     ((recoder.Power * numResearch * 3600) / totalTime).toFixed(2)),
                 React.createElement("p", null,
-                    React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/2/2e/Basic_Module_Icon.png" }),
+                    React.createElement(Icon, { type: "basic_module" }),
                     "per hour:",
                     " ",
                     ((recoder.Normal_Module * 3600) / totalTime).toFixed(2)),
                 React.createElement("p", null,
-                    React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/d/d3/Advanced_Module_Icon.png" }),
+                    React.createElement(Icon, { type: "advanced_module" }),
                     "per hour:",
                     " ",
                     ((recoder.Advanced_Module * 3600) / totalTime).toFixed(2)),
                 React.createElement("p", null,
-                    React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/9/9c/Special_Module_Icon.png" }),
+                    React.createElement(Icon, { type: "special_module" }),
                     "per hour:",
                     " ",
                     ((recoder.Special_Module * 3600) / totalTime).toFixed(2))));
@@ -818,23 +1089,22 @@ i.bi {
         const [adv_show, setAdvShow] = React.useState(false);
         return (React.createElement("div", { className: "ml-[5%] text-slate-200 absolute left-0 top-0 px-3 w-1/2 whitespace-nowrap text-sm font-semibold", style: style },
             React.createElement("div", null,
-                "[Round:",
-                React.createElement("div", { className: "text-emerald-300 inline-block" }, stat.rounds),
+                "[Cycle:",
+                React.createElement("div", { className: "text-emerald-300 inline-block" }, stat.cycles),
                 "]",
-                React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/a/ab/Part_Icon.png" }),
+                React.createElement(Icon, { type: "metal" }),
                 stat.Metal,
-                React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/f/f4/Nutrient_Icon.png" }),
+                React.createElement(Icon, { type: "nutrient" }),
                 stat.Nutrient,
-                React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/d/d0/Power_Icon.png" }),
+                React.createElement(Icon, { type: "power" }),
                 stat.Power,
-                React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/2/2e/Basic_Module_Icon.png" }),
+                React.createElement(Icon, { type: "basic_module" }),
                 stat.Normal_Module,
-                React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/d/d3/Advanced_Module_Icon.png" }),
+                React.createElement(Icon, { type: "advanced_module" }),
                 stat.Advanced_Module,
-                React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/9/9c/Special_Module_Icon.png" }),
+                React.createElement(Icon, { type: "special_module" }),
                 stat.Special_Module,
-                React.createElement("button", { onClick: () => setAdvShow((e) => !e) },
-                    React.createElement("img", { className: "icon", src: "https://static.wikia.nocookie.net/lastorigin/images/d/de/Menu_Workshop.png" }))),
+                React.createElement("button", { onClick: () => setAdvShow((e) => !e) }, "Open")),
             React.createElement(AdvanceWindow, { isShow: adv_show, recoder: stat })));
     };
 
@@ -1158,272 +1428,13 @@ i.bi {
         }
     };
 
-    const PCDisassemblingTable = {
-        B: {
-            Metal: 5,
-            Nutrient: 5,
-            Power: 5,
-            Normal_Module: 5,
-            Advanced_Module: 0,
-            Special_Module: 0,
-        },
-        A: {
-            Metal: 25,
-            Nutrient: 25,
-            Power: 25,
-            Normal_Module: 25,
-            Advanced_Module: 3,
-            Special_Module: 0,
-        },
-        S: {
-            Metal: 50,
-            Nutrient: 50,
-            Power: 50,
-            Normal_Module: 50,
-            Advanced_Module: 10,
-            Special_Module: 1,
-        },
-        SS: {
-            Metal: 100,
-            Nutrient: 100,
-            Power: 100,
-            Normal_Module: 100,
-            Advanced_Module: 20,
-            Special_Module: 5,
-        },
-    };
-    const ItemDisassemblingTable = {
-        B: {
-            Metal: 3,
-            Nutrient: 0,
-            Power: 3,
-            Normal_Module: 1,
-            Advanced_Module: 0,
-            Special_Module: 0,
-        },
-        A: {
-            Metal: 5,
-            Nutrient: 0,
-            Power: 5,
-            Normal_Module: 3,
-            Advanced_Module: 1,
-            Special_Module: 0,
-        },
-        S: {
-            Metal: 10,
-            Nutrient: 0,
-            Power: 10,
-            Normal_Module: 5,
-            Advanced_Module: 2,
-            Special_Module: 0,
-        },
-        SS: {
-            Metal: 20,
-            Nutrient: 0,
-            Power: 20,
-            Normal_Module: 10,
-            Advanced_Module: 3,
-            Special_Module: 1,
-        },
-    };
-    const stageStart = () => {
-        const status = unsafeWindow.LAOPLUS.status;
-        const curtime = new Date().getTime();
-        const { endTime, totalWaitTime } = status.status
-            .resourceFarmRecoder;
-        if (endTime) {
-            const waitTime = (curtime - endTime) / 1000;
-            status.set({
-                resourceFarmRecoder: {
-                    startTime: curtime,
-                    totalWaitTime: totalWaitTime + waitTime,
-                },
-            });
-        }
-        else {
-            status.set({
-                resourceFarmRecoder: {
-                    startTime: curtime,
-                },
-            });
-        }
-    };
-    const stageStop = () => {
-        const status = unsafeWindow.LAOPLUS.status;
-        const curtime = new Date().getTime();
-        const { waveTime, totalRoundTime, rounds } = status.status
-            .resourceFarmRecoder;
-        if (waveTime) {
-            const waitTime = (curtime - waveTime) / 1000;
-            status.set({
-                resourceFarmRecoder: {
-                    endTime: curtime,
-                    totalRoundTime: totalRoundTime + waitTime,
-                    rounds: rounds + 1,
-                },
-            });
-        }
-        else {
-            status.set({
-                resourceFarmRecoder: {
-                    endTime: curtime,
-                    rounds: rounds + 1,
-                },
-            });
-        }
-    };
-    const calcResource = (res) => {
-        const status = unsafeWindow.LAOPLUS.status;
-        // Get timer
-        const curtime = new Date().getTime();
-        const { startTime, waveTime, totalRoundTime } = status.status
-            .resourceFarmRecoder;
-        const newRoundTime = waveTime ?? startTime ?? undefined;
-        if (newRoundTime) {
-            const waitTime = (curtime - newRoundTime) / 1000;
-            status.set({
-                resourceFarmRecoder: {
-                    waveTime: curtime,
-                    totalRoundTime: totalRoundTime + waitTime,
-                },
-            });
-        }
-        else {
-            status.set({
-                resourceFarmRecoder: {
-                    waveTime: curtime,
-                },
-            });
-        }
-        // Get reward
-        const { rounds } = status.status.resourceFarmRecoder;
-        let { Metal, Nutrient, Power, Normal_Module, Advanced_Module, Special_Module, } = status.status.resourceFarmRecoder;
-        res.ClearRewardInfo.PCRewardList.forEach((pc) => {
-            switch (pc.Grade) {
-                case 2:
-                    Metal = Metal + PCDisassemblingTable["B"]["Metal"];
-                    Nutrient = Nutrient + PCDisassemblingTable["B"]["Nutrient"];
-                    Power = Power + PCDisassemblingTable["B"]["Power"];
-                    Normal_Module =
-                        Normal_Module + PCDisassemblingTable["B"]["Normal_Module"];
-                    Advanced_Module =
-                        Advanced_Module +
-                            PCDisassemblingTable["B"]["Advanced_Module"];
-                    Special_Module =
-                        Special_Module +
-                            PCDisassemblingTable["B"]["Special_Module"];
-                    break;
-                case 3:
-                    Metal = Metal + PCDisassemblingTable["A"]["Metal"];
-                    Nutrient = Nutrient + PCDisassemblingTable["A"]["Nutrient"];
-                    Power = Power + PCDisassemblingTable["A"]["Power"];
-                    Normal_Module =
-                        Normal_Module + PCDisassemblingTable["A"]["Normal_Module"];
-                    Advanced_Module =
-                        Advanced_Module +
-                            PCDisassemblingTable["A"]["Advanced_Module"];
-                    Special_Module =
-                        Special_Module +
-                            PCDisassemblingTable["A"]["Special_Module"];
-                    break;
-                case 4:
-                    Metal = Metal + PCDisassemblingTable["S"]["Metal"];
-                    Nutrient = Nutrient + PCDisassemblingTable["S"]["Nutrient"];
-                    Power = Power + PCDisassemblingTable["S"]["Power"];
-                    Normal_Module =
-                        Normal_Module + PCDisassemblingTable["S"]["Normal_Module"];
-                    Advanced_Module =
-                        Advanced_Module +
-                            PCDisassemblingTable["S"]["Advanced_Module"];
-                    Special_Module =
-                        Special_Module +
-                            PCDisassemblingTable["S"]["Special_Module"];
-                    break;
-                case 5:
-                    Metal = Metal + PCDisassemblingTable["SS"]["Metal"];
-                    Nutrient = Nutrient + PCDisassemblingTable["SS"]["Nutrient"];
-                    Power = Power + PCDisassemblingTable["SS"]["Power"];
-                    Normal_Module =
-                        Normal_Module + PCDisassemblingTable["SS"]["Normal_Module"];
-                    Advanced_Module =
-                        Advanced_Module +
-                            PCDisassemblingTable["SS"]["Advanced_Module"];
-                    Special_Module =
-                        Special_Module +
-                            PCDisassemblingTable["SS"]["Special_Module"];
-                    break;
-            }
-        });
-        res.ClearRewardInfo.ItemRewardList.forEach((item) => {
-            if (item.ItemKeyString.includes("T1")) {
-                Metal = Metal + ItemDisassemblingTable["B"]["Metal"];
-                Nutrient = Nutrient + ItemDisassemblingTable["B"]["Nutrient"];
-                Power = Power + ItemDisassemblingTable["B"]["Power"];
-                Normal_Module =
-                    Normal_Module + ItemDisassemblingTable["B"]["Normal_Module"];
-                Advanced_Module =
-                    Advanced_Module +
-                        ItemDisassemblingTable["B"]["Advanced_Module"];
-                Special_Module =
-                    Special_Module + ItemDisassemblingTable["B"]["Special_Module"];
-            }
-            else if (item.ItemKeyString.includes("T2")) {
-                Metal = Metal + ItemDisassemblingTable["A"]["Metal"];
-                Nutrient = Nutrient + ItemDisassemblingTable["A"]["Nutrient"];
-                Power = Power + ItemDisassemblingTable["A"]["Power"];
-                Normal_Module =
-                    Normal_Module + ItemDisassemblingTable["A"]["Normal_Module"];
-                Advanced_Module =
-                    Advanced_Module +
-                        ItemDisassemblingTable["A"]["Advanced_Module"];
-                Special_Module =
-                    Special_Module + ItemDisassemblingTable["A"]["Special_Module"];
-            }
-            else if (item.ItemKeyString.includes("T3")) {
-                Metal = Metal + ItemDisassemblingTable["S"]["Metal"];
-                Nutrient = Nutrient + ItemDisassemblingTable["S"]["Nutrient"];
-                Power = Power + ItemDisassemblingTable["S"]["Power"];
-                Normal_Module =
-                    Normal_Module + ItemDisassemblingTable["S"]["Normal_Module"];
-                Advanced_Module =
-                    Advanced_Module +
-                        ItemDisassemblingTable["S"]["Advanced_Module"];
-                Special_Module =
-                    Special_Module + ItemDisassemblingTable["S"]["Special_Module"];
-            }
-            else if (item.ItemKeyString.includes("T4")) {
-                Metal = Metal + ItemDisassemblingTable["SS"]["Metal"];
-                Nutrient = Nutrient + ItemDisassemblingTable["SS"]["Nutrient"];
-                Power = Power + ItemDisassemblingTable["SS"]["Power"];
-                Normal_Module =
-                    Normal_Module + ItemDisassemblingTable["SS"]["Normal_Module"];
-                Advanced_Module =
-                    Advanced_Module +
-                        ItemDisassemblingTable["SS"]["Advanced_Module"];
-                Special_Module =
-                    Special_Module + ItemDisassemblingTable["SS"]["Special_Module"];
-            }
-        });
-        log.debug(`[${rounds}] ${Metal}/${Nutrient}/${Power} - ${Normal_Module}/${Advanced_Module}/${Special_Module}`);
-        status.set({
-            resourceFarmRecoder: {
-                Metal: Metal,
-                Nutrient: Nutrient,
-                Power: Power,
-                Normal_Module: Normal_Module,
-                Advanced_Module: Advanced_Module,
-                Special_Module: Special_Module,
-            },
-        });
-    };
-
     const invoke = ({ res, url }) => {
         switch (url.pathname) {
             case "/battleserver_enter":
-                stageStart();
+                enter$2();
                 return;
             case "/battleserver_leave":
-                stageStop();
+                leave();
                 return;
             case "/wave_clear":
                 calcResource(res);
