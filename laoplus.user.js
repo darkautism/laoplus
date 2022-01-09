@@ -237,19 +237,27 @@
             enterTimerId: null,
             latestEnterTime: null,
         },
-        resourceFarmRecoder: {
+        battleStats: {
             startTime: null,
             waveTime: null,
             endTime: null,
             totalWaitTime: 0,
             totalRoundTime: 0,
             cycles: 0,
-            Metal: 0,
-            Nutrient: 0,
-            Power: 0,
-            Normal_Module: 0,
-            Advanced_Module: 0,
-            Special_Module: 0,
+            drops: {
+                units: {
+                    SS: 0,
+                    S: 0,
+                    A: 0,
+                    B: 0,
+                },
+                equipments: {
+                    SS: 0,
+                    S: 0,
+                    A: 0,
+                    B: 0,
+                },
+            },
         },
     };
     class Status {
@@ -699,102 +707,120 @@ i.bi {
                 React.createElement(Timer, { targetDate: enterDate, className: "pt-[60%] rotate-90" }))));
     };
 
-    const PCDisassemblingTable = {
-        B: {
-            Metal: 5,
-            Nutrient: 5,
-            Power: 5,
-            Normal_Module: 5,
-            Advanced_Module: 0,
-            Special_Module: 0,
-        },
-        A: {
-            Metal: 25,
-            Nutrient: 25,
-            Power: 25,
-            Normal_Module: 25,
-            Advanced_Module: 3,
-            Special_Module: 0,
-        },
-        S: {
-            Metal: 50,
-            Nutrient: 50,
-            Power: 50,
-            Normal_Module: 50,
-            Advanced_Module: 10,
-            Special_Module: 1,
-        },
-        SS: {
-            Metal: 100,
-            Nutrient: 100,
-            Power: 100,
-            Normal_Module: 100,
-            Advanced_Module: 20,
-            Special_Module: 5,
-        },
+    const rankColor = {
+        SS: chroma.rgb(255, 223, 33),
+        S: chroma.rgb(255, 166, 3),
+        A: chroma.rgb(5, 176, 228),
+        B: chroma.rgb(30, 160, 13),
     };
-    const ItemDisassemblingTable = {
-        B: {
-            Metal: 3,
-            Nutrient: 0,
-            Power: 3,
-            Normal_Module: 1,
-            Advanced_Module: 0,
-            Special_Module: 0,
-        },
-        A: {
-            Metal: 5,
-            Nutrient: 0,
-            Power: 5,
-            Normal_Module: 3,
-            Advanced_Module: 1,
-            Special_Module: 0,
-        },
-        S: {
-            Metal: 10,
-            Nutrient: 0,
-            Power: 10,
-            Normal_Module: 5,
-            Advanced_Module: 2,
-            Special_Module: 0,
-        },
-        SS: {
-            Metal: 20,
-            Nutrient: 0,
-            Power: 20,
-            Normal_Module: 10,
-            Advanced_Module: 3,
-            Special_Module: 1,
-        },
+    const uiColor = {
+        // tailwindcss lime-500
+        success: chroma.hex("#84CC16"),
+        // tailwindcss red-500
+        error: chroma.hex("#EF4444"),
+        // tailwindcss yellow-300
+        warninig: chroma.hex("#FDE047"),
+        // tailwindcss sky-400
+        info: chroma.hex("#38BDF8"),
     };
-    const resetRecoder = () => {
-        const status = unsafeWindow.LAOPLUS.status;
-        status.set({
-            resourceFarmRecoder: {
-                startTime: null,
-                waveTime: null,
-                endTime: null,
-                totalWaitTime: 0,
-                totalRoundTime: 0,
-                cycles: 0,
-                Metal: 0,
-                Nutrient: 0,
-                Power: 0,
-                Normal_Module: 0,
-                Advanced_Module: 0,
-                Special_Module: 0,
+    const disassemblingTable = {
+        units: {
+            B: {
+                parts: 5,
+                nutrients: 5,
+                power: 5,
+                basic_module: 5,
+                advanced_module: 0,
+                special_module: 0,
             },
-        });
+            A: {
+                parts: 25,
+                nutrients: 25,
+                power: 25,
+                basic_module: 25,
+                advanced_module: 3,
+                special_module: 0,
+            },
+            S: {
+                parts: 50,
+                nutrients: 50,
+                power: 50,
+                basic_module: 50,
+                advanced_module: 10,
+                special_module: 1,
+            },
+            SS: {
+                parts: 100,
+                nutrients: 100,
+                power: 100,
+                basic_module: 100,
+                advanced_module: 20,
+                special_module: 5,
+            },
+        },
+        equipments: {
+            B: {
+                parts: 3,
+                nutrients: 0,
+                power: 3,
+                basic_module: 1,
+                advanced_module: 0,
+                special_module: 0,
+            },
+            A: {
+                parts: 5,
+                nutrients: 0,
+                power: 5,
+                basic_module: 3,
+                advanced_module: 1,
+                special_module: 0,
+            },
+            S: {
+                parts: 10,
+                nutrients: 0,
+                power: 10,
+                basic_module: 5,
+                advanced_module: 2,
+                special_module: 0,
+            },
+            SS: {
+                parts: 20,
+                nutrients: 0,
+                power: 20,
+                basic_module: 10,
+                advanced_module: 3,
+                special_module: 1,
+            },
+        },
+    };
+
+    const itemKeyToRank = (itemKey) => {
+        switch (true) {
+            case /_T1$/.test(itemKey):
+                return "B";
+            case /_T2$/.test(itemKey):
+                return "A";
+            case /_T3$/.test(itemKey):
+                return "S";
+            case /_T4$/.test(itemKey):
+                return "SS";
+            // そもそも消耗品などはT1とかで終わらない
+            default:
+                return "";
+        }
+    };
+
+    const resetRecoder = () => {
+        unsafeWindow.LAOPLUS.status.set({ battleStats: defaultStatus.battleStats });
     };
     const enter$2 = () => {
         const status = unsafeWindow.LAOPLUS.status;
         const curtime = new Date().getTime();
-        const { endTime, totalWaitTime } = status.status
-            .resourceFarmRecoder;
+        const { endTime, totalWaitTime } = status.status.battleStats;
         if (endTime) {
             const waitTime = (curtime - endTime) / 1000;
             status.set({
-                resourceFarmRecoder: {
+                battleStats: {
                     startTime: curtime,
                     totalWaitTime: totalWaitTime + waitTime,
                 },
@@ -802,7 +828,7 @@ i.bi {
         }
         else {
             status.set({
-                resourceFarmRecoder: {
+                battleStats: {
                     startTime: curtime,
                 },
             });
@@ -811,38 +837,75 @@ i.bi {
     const leave = () => {
         const status = unsafeWindow.LAOPLUS.status;
         const curtime = new Date().getTime();
-        const { waveTime, totalRoundTime, cycles } = status.status
-            .resourceFarmRecoder;
+        const { waveTime, totalRoundTime } = status.status.battleStats;
         if (waveTime) {
             const waitTime = (curtime - waveTime) / 1000;
             status.set({
-                resourceFarmRecoder: {
+                battleStats: {
                     endTime: curtime,
                     totalRoundTime: totalRoundTime + waitTime,
-                    cycles: cycles + 1,
                 },
             });
         }
         else {
             status.set({
-                resourceFarmRecoder: {
+                battleStats: {
                     endTime: curtime,
-                    cycles: cycles + 1,
                 },
             });
         }
     };
-    const calcResource = (res) => {
+    /**
+     * @package
+     */
+    const incrementDrops = (res) => {
+        const status = unsafeWindow.LAOPLUS.status;
+        const units = res.ClearRewardInfo.PCRewardList.reduce((unitDrops, unit) => {
+            const rank = gradeToRank(unit.Grade);
+            if (rank === "")
+                return unitDrops;
+            return {
+                ...unitDrops,
+                [rank]: unitDrops[rank] + 1,
+            };
+        }, status.status.battleStats.drops.units);
+        const equipments = res.ClearRewardInfo.ItemRewardList.reduce((equipmentDrops, item) => {
+            const rank = itemKeyToRank(item.ItemKeyString);
+            if (rank === "")
+                return equipmentDrops;
+            return {
+                ...equipmentDrops,
+                [rank]: equipmentDrops[rank] + 1,
+            };
+        }, status.status.battleStats.drops.equipments);
+        status.set({
+            battleStats: { drops: { units, equipments } },
+        });
+    };
+    /**
+     * @package
+     */
+    const incrementCycles = () => {
+        const status = unsafeWindow.LAOPLUS.status;
+        const cycles = status.status.battleStats.cycles + 1;
+        status.set({
+            battleStats: { cycles },
+        });
+    };
+    /**
+     * @package
+     */
+    const updateTimes = () => {
         const status = unsafeWindow.LAOPLUS.status;
         // Get timer
         const curtime = new Date().getTime();
         const { startTime, waveTime, totalRoundTime } = status.status
-            .resourceFarmRecoder;
+            .battleStats;
         const newRoundTime = waveTime ?? startTime ?? undefined;
         if (newRoundTime) {
             const waitTime = (curtime - newRoundTime) / 1000;
             status.set({
-                resourceFarmRecoder: {
+                battleStats: {
                     waveTime: curtime,
                     totalRoundTime: totalRoundTime + waitTime,
                 },
@@ -850,131 +913,11 @@ i.bi {
         }
         else {
             status.set({
-                resourceFarmRecoder: {
+                battleStats: {
                     waveTime: curtime,
                 },
             });
         }
-        // Get reward
-        const { cycles } = status.status.resourceFarmRecoder;
-        let { Metal, Nutrient, Power, Normal_Module, Advanced_Module, Special_Module, } = status.status.resourceFarmRecoder;
-        res.ClearRewardInfo.PCRewardList.forEach((pc) => {
-            switch (pc.Grade) {
-                case 2:
-                    Metal = Metal + PCDisassemblingTable["B"]["Metal"];
-                    Nutrient = Nutrient + PCDisassemblingTable["B"]["Nutrient"];
-                    Power = Power + PCDisassemblingTable["B"]["Power"];
-                    Normal_Module =
-                        Normal_Module + PCDisassemblingTable["B"]["Normal_Module"];
-                    Advanced_Module =
-                        Advanced_Module +
-                            PCDisassemblingTable["B"]["Advanced_Module"];
-                    Special_Module =
-                        Special_Module +
-                            PCDisassemblingTable["B"]["Special_Module"];
-                    break;
-                case 3:
-                    Metal = Metal + PCDisassemblingTable["A"]["Metal"];
-                    Nutrient = Nutrient + PCDisassemblingTable["A"]["Nutrient"];
-                    Power = Power + PCDisassemblingTable["A"]["Power"];
-                    Normal_Module =
-                        Normal_Module + PCDisassemblingTable["A"]["Normal_Module"];
-                    Advanced_Module =
-                        Advanced_Module +
-                            PCDisassemblingTable["A"]["Advanced_Module"];
-                    Special_Module =
-                        Special_Module +
-                            PCDisassemblingTable["A"]["Special_Module"];
-                    break;
-                case 4:
-                    Metal = Metal + PCDisassemblingTable["S"]["Metal"];
-                    Nutrient = Nutrient + PCDisassemblingTable["S"]["Nutrient"];
-                    Power = Power + PCDisassemblingTable["S"]["Power"];
-                    Normal_Module =
-                        Normal_Module + PCDisassemblingTable["S"]["Normal_Module"];
-                    Advanced_Module =
-                        Advanced_Module +
-                            PCDisassemblingTable["S"]["Advanced_Module"];
-                    Special_Module =
-                        Special_Module +
-                            PCDisassemblingTable["S"]["Special_Module"];
-                    break;
-                case 5:
-                    Metal = Metal + PCDisassemblingTable["SS"]["Metal"];
-                    Nutrient = Nutrient + PCDisassemblingTable["SS"]["Nutrient"];
-                    Power = Power + PCDisassemblingTable["SS"]["Power"];
-                    Normal_Module =
-                        Normal_Module + PCDisassemblingTable["SS"]["Normal_Module"];
-                    Advanced_Module =
-                        Advanced_Module +
-                            PCDisassemblingTable["SS"]["Advanced_Module"];
-                    Special_Module =
-                        Special_Module +
-                            PCDisassemblingTable["SS"]["Special_Module"];
-                    break;
-            }
-        });
-        res.ClearRewardInfo.ItemRewardList.forEach((item) => {
-            if (item.ItemKeyString.includes("T1")) {
-                Metal = Metal + ItemDisassemblingTable["B"]["Metal"];
-                Nutrient = Nutrient + ItemDisassemblingTable["B"]["Nutrient"];
-                Power = Power + ItemDisassemblingTable["B"]["Power"];
-                Normal_Module =
-                    Normal_Module + ItemDisassemblingTable["B"]["Normal_Module"];
-                Advanced_Module =
-                    Advanced_Module +
-                        ItemDisassemblingTable["B"]["Advanced_Module"];
-                Special_Module =
-                    Special_Module + ItemDisassemblingTable["B"]["Special_Module"];
-            }
-            else if (item.ItemKeyString.includes("T2")) {
-                Metal = Metal + ItemDisassemblingTable["A"]["Metal"];
-                Nutrient = Nutrient + ItemDisassemblingTable["A"]["Nutrient"];
-                Power = Power + ItemDisassemblingTable["A"]["Power"];
-                Normal_Module =
-                    Normal_Module + ItemDisassemblingTable["A"]["Normal_Module"];
-                Advanced_Module =
-                    Advanced_Module +
-                        ItemDisassemblingTable["A"]["Advanced_Module"];
-                Special_Module =
-                    Special_Module + ItemDisassemblingTable["A"]["Special_Module"];
-            }
-            else if (item.ItemKeyString.includes("T3")) {
-                Metal = Metal + ItemDisassemblingTable["S"]["Metal"];
-                Nutrient = Nutrient + ItemDisassemblingTable["S"]["Nutrient"];
-                Power = Power + ItemDisassemblingTable["S"]["Power"];
-                Normal_Module =
-                    Normal_Module + ItemDisassemblingTable["S"]["Normal_Module"];
-                Advanced_Module =
-                    Advanced_Module +
-                        ItemDisassemblingTable["S"]["Advanced_Module"];
-                Special_Module =
-                    Special_Module + ItemDisassemblingTable["S"]["Special_Module"];
-            }
-            else if (item.ItemKeyString.includes("T4")) {
-                Metal = Metal + ItemDisassemblingTable["SS"]["Metal"];
-                Nutrient = Nutrient + ItemDisassemblingTable["SS"]["Nutrient"];
-                Power = Power + ItemDisassemblingTable["SS"]["Power"];
-                Normal_Module =
-                    Normal_Module + ItemDisassemblingTable["SS"]["Normal_Module"];
-                Advanced_Module =
-                    Advanced_Module +
-                        ItemDisassemblingTable["SS"]["Advanced_Module"];
-                Special_Module =
-                    Special_Module + ItemDisassemblingTable["SS"]["Special_Module"];
-            }
-        });
-        log.debug("ResourceFarmRecorder", "Cycles:", cycles, "resources", { Metal, Nutrient, Power }, "modules", { Normal_Module, Advanced_Module, Special_Module });
-        status.set({
-            resourceFarmRecoder: {
-                Metal: Metal,
-                Nutrient: Nutrient,
-                Power: Power,
-                Normal_Module: Normal_Module,
-                Advanced_Module: Advanced_Module,
-                Special_Module: Special_Module,
-            },
-        });
     };
 
     const Icon = ({ type }) => {
@@ -995,117 +938,127 @@ i.bi {
                     return base + "/item/module/special.png";
             }
         })();
-        return React.createElement("img", { className: "inline w-4 h-4 object-contain", src: url });
+        return React.createElement("img", { className: "inline w-6 h-6 object-contain", src: url });
     };
 
+    classNames;
     function jsonEqual(a, b) {
         return JSON.stringify(a) === JSON.stringify(b);
     }
-    function AdvanceWindow(props) {
-        const isShow = props.isShow;
-        const recoder = props.recoder;
-        const totalTime = recoder.totalRoundTime + recoder.totalWaitTime;
-        const [Research, setResearch] = React.useState("2.5");
-        const numResearch = parseFloat(Research);
-        if (isShow) {
-            return (React.createElement("div", null,
-                "Research:",
-                " ",
-                React.createElement("select", { className: "text-black", value: Research, onChange: (e) => setResearch((old) => e.target.value) },
-                    React.createElement("option", { value: "1" }, "0%"),
-                    React.createElement("option", { value: "1.3" }, "30%"),
-                    React.createElement("option", { value: "1.6" }, "60%"),
-                    React.createElement("option", { value: "1.9" }, "90%"),
-                    React.createElement("option", { value: "2.2" }, "120%"),
-                    React.createElement("option", { value: "2.5" }, "150%")),
-                React.createElement("button", { className: "bg-amber-300 ml-1 p-1 text-black font-bold", onClick: resetRecoder }, "Reset"),
-                React.createElement("p", null,
-                    React.createElement("table", null,
-                        React.createElement("tr", null,
-                            React.createElement("th", null),
-                            React.createElement("th", null, "Average"),
-                            React.createElement("th", null, "Total")),
-                        React.createElement("tr", null,
-                            React.createElement("th", null, "Round Time"),
-                            React.createElement("td", null, (recoder.totalRoundTime / recoder.cycles).toFixed(2)),
-                            React.createElement("td", null, recoder.totalRoundTime.toFixed(2))),
-                        React.createElement("tr", null,
-                            React.createElement("th", null, "Wait Time"),
-                            React.createElement("td", null, (recoder.totalWaitTime / recoder.cycles).toFixed(2)),
-                            React.createElement("td", null, recoder.totalWaitTime.toFixed(2))),
-                        React.createElement("tr", null,
-                            React.createElement("th", null, "Total Time"),
-                            React.createElement("td", null, (totalTime / recoder.cycles).toFixed(2)),
-                            React.createElement("td", null, totalTime.toFixed(2))))),
-                React.createElement("p", null,
-                    React.createElement(Icon, { type: "metal" }),
-                    "per hour:",
-                    " ",
-                    ((recoder.Metal * numResearch * 3600) / totalTime).toFixed(2)),
-                React.createElement("p", null,
-                    React.createElement(Icon, { type: "nutrient" }),
-                    "per hour:",
-                    " ",
-                    ((recoder.Nutrient * numResearch * 3600) /
-                        totalTime).toFixed(2)),
-                React.createElement("p", null,
-                    React.createElement(Icon, { type: "power" }),
-                    "per hour:",
-                    " ",
-                    ((recoder.Power * numResearch * 3600) / totalTime).toFixed(2)),
-                React.createElement("p", null,
-                    React.createElement(Icon, { type: "basic_module" }),
-                    "per hour:",
-                    " ",
-                    ((recoder.Normal_Module * 3600) / totalTime).toFixed(2)),
-                React.createElement("p", null,
-                    React.createElement(Icon, { type: "advanced_module" }),
-                    "per hour:",
-                    " ",
-                    ((recoder.Advanced_Module * 3600) / totalTime).toFixed(2)),
-                React.createElement("p", null,
-                    React.createElement(Icon, { type: "special_module" }),
-                    "per hour:",
-                    " ",
-                    ((recoder.Special_Module * 3600) / totalTime).toFixed(2))));
-        }
-        return React.createElement(React.Fragment, null);
-    }
-    const ResourceFarmer = () => {
+    const GridItem = ({ icon, value, average }) => {
+        return (React.createElement("div", { className: "flex gap-1" },
+            icon,
+            React.createElement("div", { className: "flex flex-col" },
+                React.createElement("span", null, value),
+                React.createElement("span", { className: "text-gray-600" }, average))));
+    };
+    const BattleStats = () => {
         const status = unsafeWindow.LAOPLUS.status;
         const [stat, setStat] = React.useState({
-            ...status.status.resourceFarmRecoder,
+            ...status.status.battleStats,
         });
         status.events.on("changed", (e) => {
             setStat((old) => {
-                if (!jsonEqual(old, e.resourceFarmRecoder))
-                    return { ...e.resourceFarmRecoder };
+                if (!jsonEqual(old, e.battleStats))
+                    return { ...e.battleStats };
                 return old;
             });
         });
-        const style = {
-            textShadow: "black 0.1em 0.1em 0.2em",
+        const [showPanel, setShowPanel] = React.useState(false);
+        const handleButtonClick = () => {
+            setShowPanel((v) => !v);
         };
-        const [adv_show, setAdvShow] = React.useState(false);
-        return (React.createElement("div", { className: "ml-[5%] text-slate-200 absolute left-0 top-0 px-3 w-1/2 whitespace-nowrap text-sm font-semibold", style: style },
-            React.createElement("div", null,
-                "[Cycle:",
+        const disassemblingMultiplier = 2.5;
+        const totalTime = stat.totalRoundTime + stat.totalWaitTime;
+        const calcAverage = (value) => {
+            return ((value * disassemblingMultiplier * 3600) / totalTime).toFixed(2);
+        };
+        const disassembledResource = (() => {
+            log.log("BattleStats", "disassembledResource");
+            /**
+             * 素の分解獲得資源値に自分の分解獲得資源上昇値をかけた値を得る
+             */
+            const getMultipliedValue = (amount, type) => {
+                // TODO: 設定から倍率を取る
+                /**
+                 * ユーザーが実際にゲームで見る数値
+                 *
+                 * **追加で** xxx%得られるという意味なので使うときは100%分足してかける
+                 * @example 150
+                 */
+                const rawMultiplier = type === "unit" ? 150 : 185;
+                /**
+                 * 計算に使う数値
+                 * @example 2.5
+                 */
+                const multiplier = rawMultiplier * 0.01 + 1;
+                return Math.trunc(amount * multiplier);
+            };
+            // 分解獲得資源上昇（研究「精密分解施設」,基地「装備分解室」）で増えるのは部品・栄養・電力のみ
+            // 計算式: 少数切り捨て(1体から得られる量 * 数 * 倍率)
+            const sumDefault = {
+                parts: 0,
+                nutrients: 0,
+                power: 0,
+                basic_module: 0,
+                advanced_module: 0,
+                special_module: 0,
+            };
+            const drops = status.status.battleStats.drops;
+            const unitRanks = Object.keys(drops.units);
+            const unitDisassemblingTotalResource = unitRanks.reduce((sum, rank) => {
+                const amount = drops.units[rank];
+                const table = disassemblingTable.units[rank];
+                Object.keys(table).map((key) => {
+                    sum[key] = sum[key] + table[key] * amount;
+                });
+                log.log("BattleStats", "unit", rank, "倍率かける前", sum);
+                // 部品・栄養・電力のみ 倍率をかける
+                sum.parts = getMultipliedValue(sum.parts, "unit");
+                sum.nutrients = getMultipliedValue(sum.nutrients, "unit");
+                sum.power = getMultipliedValue(sum.power, "unit");
+                log.log("BattleStats", "unit", rank, "倍率かけた後", sum);
+                return sum;
+            }, sumDefault);
+            return unitDisassemblingTotalResource;
+        })();
+        const averageBattleTime = (stat.totalRoundTime / stat.cycles).toFixed(2);
+        const totalBattleTime = stat.totalRoundTime.toFixed(2);
+        const averageWaitingTime = (stat.totalWaitTime / stat.cycles).toFixed(2);
+        const totalWaitingTime = stat.totalWaitTime.toFixed(2);
+        const averageCycleTime = (totalTime / stat.cycles).toFixed(2);
+        const totalCycleTime = totalTime.toFixed(2);
+        return (React.createElement("div", { className: "relative" },
+            React.createElement("button", { onClick: handleButtonClick, title: "\u6226\u95D8\u60C5\u5831\u30D1\u30CD\u30EB\u3092\u8868\u793A\u3059\u308B", className: "h-6 text-white drop-shadow-featureIcon" },
+                React.createElement("i", { className: "bi bi-recycle" })),
+            showPanel && (React.createElement("div", { className: "min-w-[300px] absolute bottom-6 left-0 mb-1 p-4 bg-gray-50 rounded shadow-md" },
+                React.createElement("table", null,
+                    React.createElement("tr", null,
+                        React.createElement("th", null),
+                        React.createElement("th", null, "\u5E73\u5747"),
+                        React.createElement("th", null, "\u5408\u8A08")),
+                    React.createElement("tr", null,
+                        React.createElement("th", null, "\u6226\u95D8\u6642\u9593"),
+                        React.createElement("td", null, averageBattleTime),
+                        React.createElement("td", null, totalBattleTime)),
+                    React.createElement("tr", null,
+                        React.createElement("th", null, "\u5F85\u6A5F\u6642\u9593"),
+                        React.createElement("td", null, averageWaitingTime),
+                        React.createElement("td", null, totalWaitingTime)),
+                    React.createElement("tr", null,
+                        React.createElement("th", null, "\u6226\u95D8+\u5F85\u6A5F\u6642\u9593"),
+                        React.createElement("td", null, averageCycleTime),
+                        React.createElement("td", null, totalCycleTime))),
+                "\u5B8C\u4E86\u3057\u305F\u6226\u95D8\u6570:",
                 React.createElement("div", { className: "text-emerald-300 inline-block" }, stat.cycles),
-                "]",
-                React.createElement(Icon, { type: "metal" }),
-                stat.Metal,
-                React.createElement(Icon, { type: "nutrient" }),
-                stat.Nutrient,
-                React.createElement(Icon, { type: "power" }),
-                stat.Power,
-                React.createElement(Icon, { type: "basic_module" }),
-                stat.Normal_Module,
-                React.createElement(Icon, { type: "advanced_module" }),
-                stat.Advanced_Module,
-                React.createElement(Icon, { type: "special_module" }),
-                stat.Special_Module,
-                React.createElement("button", { onClick: () => setAdvShow((e) => !e) }, "Open")),
-            React.createElement(AdvanceWindow, { isShow: adv_show, recoder: stat })));
+                React.createElement("button", { className: "bg-amber-300 ml-1 p-1 text-black font-bold", onClick: resetRecoder }, "\u30EA\u30BB\u30C3\u30C8"),
+                React.createElement("div", { className: "grid gap-1 grid-cols-3 grid-rows-2" },
+                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "metal" }), value: disassembledResource.parts, average: calcAverage(disassembledResource.parts) }),
+                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "nutrient" }), value: disassembledResource.nutrients, average: calcAverage(disassembledResource.nutrients) }),
+                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "power" }), value: disassembledResource.power, average: calcAverage(disassembledResource.power) }),
+                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "basic_module" }), value: disassembledResource.basic_module, average: calcAverage(disassembledResource.basic_module) }),
+                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "advanced_module" }), value: disassembledResource.advanced_module, average: calcAverage(disassembledResource.advanced_module) }),
+                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "special_module" }), value: disassembledResource.special_module, average: calcAverage(disassembledResource.special_module) }))))));
     };
 
     const cn = classNames;
@@ -1118,10 +1071,9 @@ i.bi {
         const handleClick = () => {
             config.set({ features: { autorunDetection: { enabled: !enabled } } });
         };
-        return (React.createElement("button", { onClick: handleClick, title: `自動周回停止判定を${enabled ? "オフ" : "オン"}にする`, className: cn("text-white drop-shadow", enabled && "animate-spin"), style: {
+        return (React.createElement("button", { onClick: handleClick, title: `自動周回停止判定を${enabled ? "オフ" : "オン"}にする`, className: cn("text-white drop-shadow-featureIcon h-6", enabled && "animate-spin"), style: {
                 animationDuration: "2s",
                 animationTimingFunction: "ease-in-out",
-                filter: "drop-shadow(0 0 0.1em black)",
             } },
             React.createElement("i", { className: "bi bi-arrow-repeat" })));
     };
@@ -1134,9 +1086,9 @@ i.bi {
             React.createElement(BootstrapIcon, null),
             React.createElement(IconWrapper, null,
                 React.createElement(ConfigModal, null),
-                React.createElement(ToggleAutorun, null)),
-            React.createElement(AutorunStatus, null),
-            React.createElement(ResourceFarmer, null)));
+                React.createElement(ToggleAutorun, null),
+                React.createElement(BattleStats, null)),
+            React.createElement(AutorunStatus, null)));
     };
     const initUi = () => {
         const root = document.createElement("div");
@@ -1248,23 +1200,6 @@ i.bi {
                 cancel(res);
                 return;
         }
-    };
-
-    const rankColor = {
-        SS: chroma.rgb(255, 223, 33),
-        S: chroma.rgb(255, 166, 3),
-        A: chroma.rgb(5, 176, 228),
-        B: chroma.rgb(30, 160, 13),
-    };
-    const uiColor = {
-        // tailwindcss lime-500
-        success: chroma.hex("#84CC16"),
-        // tailwindcss red-500
-        error: chroma.hex("#EF4444"),
-        // tailwindcss yellow-300
-        warninig: chroma.hex("#FDE047"),
-        // tailwindcss sky-400
-        info: chroma.hex("#38BDF8"),
     };
 
     /**
@@ -1435,9 +1370,11 @@ i.bi {
                 return;
             case "/battleserver_leave":
                 leave();
+                incrementCycles();
                 return;
             case "/wave_clear":
-                calcResource(res);
+                incrementDrops(res);
+                updateTimes();
                 return;
         }
     };
@@ -1545,6 +1482,9 @@ i.bi {
                 },
                 lineHeight: {
                     zero: "0",
+                },
+                dropShadow: {
+                    featureIcon: "0 0 0.1em black",
                 },
             },
         },
