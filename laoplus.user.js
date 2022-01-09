@@ -941,10 +941,59 @@ i.bi {
         return React.createElement("img", { className: "inline w-6 h-6 object-contain", src: url });
     };
 
+    // 分解についてのメモ
+    // 分解獲得資源上昇（研究「精密分解施設」, 基地「装備分解室」）で増えるのは部品・栄養・電力のみ
+    // 計算式: 少数切り捨て(1体から得られる量 * 数 * 倍率)
+    /**
+     * 素の分解獲得資源値に自分の分解獲得資源上昇値をかけた値を得る
+     */
+    const calcMultipliedValue = (amount, type) => {
+        // TODO: 設定から倍率を取る
+        /**
+         * ユーザーが実際にゲームで見る数値
+         *
+         * **追加で** xxx%得られるという意味なので使うときは100%分足してかける
+         * @example 150
+         */
+        const rawMultiplier = type === "unit" ? 150 : 185;
+        /**
+         * 計算に使う数値
+         * @example 2.5
+         */
+        const multiplier = rawMultiplier * 0.01 + 1;
+        return Math.trunc(amount * multiplier);
+    };
+    /**
+     * @package
+     */
+    const calcResourcesFromDrops = ({ drops, table, type, }) => {
+        const sumInitialValue = {
+            parts: 0,
+            nutrients: 0,
+            power: 0,
+            basic_module: 0,
+            advanced_module: 0,
+            special_module: 0,
+        };
+        const ranks = Object.keys(drops);
+        // ランクごとに集計・加算して返す
+        const total = ranks.reduce((sum, rank) => {
+            Object.keys(table).map((key) => {
+                sum[key] = sum[key] + table[rank][key] * drops[rank];
+            });
+            log.debug("BattleStats", type, rank, "倍率かける前", sum);
+            // 部品・栄養・電力のみ 倍率をかける
+            sum.parts = calcMultipliedValue(sum.parts, "unit");
+            sum.nutrients = calcMultipliedValue(sum.nutrients, "unit");
+            sum.power = calcMultipliedValue(sum.power, "unit");
+            log.debug("BattleStats", type, rank, "倍率かけた後", sum);
+            return sum;
+        }, sumInitialValue);
+        log.debug("BattleStats", type, "total", total);
+        return total;
+    };
+
     classNames;
-    function jsonEqual(a, b) {
-        return JSON.stringify(a) === JSON.stringify(b);
-    }
     const GridItem = ({ icon, value, average }) => {
         return (React.createElement("div", { className: "flex gap-1" },
             icon,
@@ -959,8 +1008,11 @@ i.bi {
         });
         status.events.on("changed", (e) => {
             setStat((old) => {
-                if (!jsonEqual(old, e.battleStats))
-                    return { ...e.battleStats };
+                if (_.isEqual(old, e.battleStats)) {
+                    return {
+                        ...e.battleStats,
+                    };
+                }
                 return old;
             });
         });
@@ -974,53 +1026,31 @@ i.bi {
             return ((value * disassemblingMultiplier * 3600) / totalTime).toFixed(2);
         };
         const disassembledResource = (() => {
-            log.log("BattleStats", "disassembledResource");
-            /**
-             * 素の分解獲得資源値に自分の分解獲得資源上昇値をかけた値を得る
-             */
-            const getMultipliedValue = (amount, type) => {
-                // TODO: 設定から倍率を取る
-                /**
-                 * ユーザーが実際にゲームで見る数値
-                 *
-                 * **追加で** xxx%得られるという意味なので使うときは100%分足してかける
-                 * @example 150
-                 */
-                const rawMultiplier = type === "unit" ? 150 : 185;
-                /**
-                 * 計算に使う数値
-                 * @example 2.5
-                 */
-                const multiplier = rawMultiplier * 0.01 + 1;
-                return Math.trunc(amount * multiplier);
-            };
-            // 分解獲得資源上昇（研究「精密分解施設」,基地「装備分解室」）で増えるのは部品・栄養・電力のみ
-            // 計算式: 少数切り捨て(1体から得られる量 * 数 * 倍率)
-            const sumDefault = {
-                parts: 0,
-                nutrients: 0,
-                power: 0,
-                basic_module: 0,
-                advanced_module: 0,
-                special_module: 0,
-            };
+            log.log("BattleStats", "calc disassembledResource");
             const drops = status.status.battleStats.drops;
-            const unitRanks = Object.keys(drops.units);
-            const unitDisassemblingTotalResource = unitRanks.reduce((sum, rank) => {
-                const amount = drops.units[rank];
-                const table = disassemblingTable.units[rank];
-                Object.keys(table).map((key) => {
-                    sum[key] = sum[key] + table[key] * amount;
-                });
-                log.log("BattleStats", "unit", rank, "倍率かける前", sum);
-                // 部品・栄養・電力のみ 倍率をかける
-                sum.parts = getMultipliedValue(sum.parts, "unit");
-                sum.nutrients = getMultipliedValue(sum.nutrients, "unit");
-                sum.power = getMultipliedValue(sum.power, "unit");
-                log.log("BattleStats", "unit", rank, "倍率かけた後", sum);
-                return sum;
-            }, sumDefault);
-            return unitDisassemblingTotalResource;
+            const unitResorces = calcResourcesFromDrops({
+                drops: drops.units,
+                table: disassemblingTable.units,
+                type: "units",
+            });
+            log.log("BattleStats", "disassembledResource", "unitResorces", unitResorces);
+            const equipmentResources = calcResourcesFromDrops({
+                drops: drops.equipments,
+                table: disassemblingTable.equipments,
+                type: "equipments",
+            });
+            log.log("BattleStats", "disassembledResource", "equipmentResources", equipmentResources);
+            const total = {
+                parts: unitResorces.parts + equipmentResources.parts,
+                nutrients: unitResorces.nutrients + equipmentResources.nutrients,
+                power: unitResorces.power + equipmentResources.power,
+                basic_module: unitResorces.basic_module + equipmentResources.basic_module,
+                advanced_module: unitResorces.advanced_module +
+                    equipmentResources.advanced_module,
+                special_module: unitResorces.special_module + equipmentResources.special_module,
+            };
+            log.log("BattleStats", "disassembledResource", "total", total);
+            return total;
         })();
         const averageBattleTime = (stat.totalRoundTime / stat.cycles).toFixed(2);
         const totalBattleTime = stat.totalRoundTime.toFixed(2);
