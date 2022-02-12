@@ -741,12 +741,143 @@ i.bi {
         // tailwindcss sky-400
         info: chroma.hex("#38BDF8"),
     };
+    const disassemblingTable = {
+        units: {
+            B: {
+                parts: 5,
+                nutrients: 5,
+                power: 5,
+                basic_module: 5,
+                advanced_module: 0,
+                special_module: 0,
+            },
+            A: {
+                parts: 25,
+                nutrients: 25,
+                power: 25,
+                basic_module: 25,
+                advanced_module: 3,
+                special_module: 0,
+            },
+            S: {
+                parts: 50,
+                nutrients: 50,
+                power: 50,
+                basic_module: 50,
+                advanced_module: 10,
+                special_module: 1,
+            },
+            SS: {
+                parts: 100,
+                nutrients: 100,
+                power: 100,
+                basic_module: 100,
+                advanced_module: 20,
+                special_module: 5,
+            },
+        },
+        equipments: {
+            B: {
+                parts: 3,
+                nutrients: 0,
+                power: 3,
+                basic_module: 1,
+                advanced_module: 0,
+                special_module: 0,
+            },
+            A: {
+                parts: 5,
+                nutrients: 0,
+                power: 5,
+                basic_module: 3,
+                advanced_module: 1,
+                special_module: 0,
+            },
+            S: {
+                parts: 10,
+                nutrients: 0,
+                power: 10,
+                basic_module: 5,
+                advanced_module: 2,
+                special_module: 0,
+            },
+            SS: {
+                parts: 20,
+                nutrients: 0,
+                power: 20,
+                basic_module: 10,
+                advanced_module: 3,
+                special_module: 1,
+            },
+        },
+    };
+
+    // 分解についてのメモ
+    // 分解獲得資源上昇（研究「精密分解施設」, 基地「装備分解室」）で増えるのは部品・栄養・電力のみ
+    // 計算式: 少数切り捨て(1体から得られる量 * 数 * 倍率)
+    /**
+     * 素の分解獲得資源値に自分の分解獲得資源上昇値をかけた値を得る
+     */
+    const calcMultipliedValue = (amount, type) => {
+        // TODO: 設定から倍率を取る
+        /**
+         * ユーザーが実際にゲームで見る数値
+         *
+         * **追加で** xxx%得られるという意味なので、使うときは100足す
+         * @example 150
+         */
+        const rawMultiplier = type === "units" ? 150 : 185;
+        /**
+         * 計算に使う数値
+         * @example 2.5
+         */
+        const multiplier = rawMultiplier * 0.01 + 1;
+        return Math.trunc(amount * multiplier);
+    };
+    // TODO: テストを書く
+    /**
+     * @package
+     */
+    const calcResourcesFromDrops = ({ drops, table, type, }) => {
+        const sumInitialValue = {
+            parts: 0,
+            nutrients: 0,
+            power: 0,
+            basic_module: 0,
+            advanced_module: 0,
+            special_module: 0,
+        };
+        Object.freeze(sumInitialValue);
+        const ranks = Object.keys(drops);
+        // ランクごとに集計・加算して返す
+        const total = ranks.reduce((sum, rank) => {
+            const resourceKeys = Object.keys(sumInitialValue);
+            // このランクを分解して得られる資源量を保存するオブジェクト
+            const income = { ...sumInitialValue };
+            resourceKeys.forEach((key) => {
+                income[key] = table[rank][key] * drops[rank];
+            });
+            log.debug("BattleStats", type, rank, "倍率かける前", income);
+            // 部品・栄養・電力のみ 上昇倍率をかける
+            income.parts = calcMultipliedValue(income.parts, type);
+            income.nutrients = calcMultipliedValue(income.nutrients, type);
+            income.power = calcMultipliedValue(income.power, type);
+            log.debug("BattleStats", type, rank, "倍率かけた後", income);
+            // sumとincomeを加算する
+            resourceKeys.forEach((key) => {
+                sum[key] += income[key];
+            });
+            return sum;
+        }, sumInitialValue);
+        log.debug("BattleStats", type, "total", total);
+        return total;
+    };
 
     const Icon = ({ type }) => {
         const url = (() => {
             const base = `https://cdn.laoplus.net/ui/`;
             switch (type) {
-                case "metal":
+                case "parts":
                     return base + "/currenncy/metal.png";
                 case "nutrient":
                     return base + "/currenncy/nutrient.png";
@@ -837,8 +968,37 @@ i.bi {
         const toggleCheckState = () => {
             setDisplayType((v) => (v === "sum" ? "perHour" : "sum"));
         };
+        const disassembledResource = (() => {
+            const unitResorces = calcResourcesFromDrops({
+                drops: stats.drops.units,
+                table: disassemblingTable.units,
+                type: "units",
+            });
+            log.log("BattleStats", "disassembledResource", "unitResorces", unitResorces);
+            const equipmentResources = calcResourcesFromDrops({
+                drops: stats.drops.equipments,
+                table: disassemblingTable.equipments,
+                type: "equipments",
+            });
+            log.log("BattleStats", "disassembledResource", "equipmentResources", equipmentResources);
+            const total = [unitResorces, equipmentResources].reduce((sum, resources) => {
+                Object.keys(resources).forEach((key) => {
+                    sum[key] = sum[key] + resources[key];
+                });
+                return sum;
+            }, {
+                parts: 0,
+                nutrients: 0,
+                power: 0,
+                basic_module: 0,
+                advanced_module: 0,
+                special_module: 0,
+            });
+            log.log("BattleStats", "disassembledResource", "total", total);
+            return total;
+        })();
         return (React.createElement("div", { className: "relative" },
-            React.createElement("button", { onClick: handleButtonClick, title: "\u5468\u56DE\u60C5\u5831\u30D1\u30CD\u30EB\u3092\u8868\u793A\u3059\u308B", className: "h-6 text-white drop-shadow-featureIcon" },
+            React.createElement("button", { onClick: handleButtonClick, title: "\u5468\u56DE\u60C5\u5831\u30D1\u30CD\u30EB\u3092\u8868\u793A\u3059\u308B", className: "drop-shadow-featureIcon h-6 text-white" },
                 React.createElement("i", { className: "bi bi-recycle" })),
             showPanel && (React.createElement("div", { className: "w-[420px] ring-gray-900/5 absolute bottom-6 left-0 mb-1 rounded-lg shadow-xl overflow-hidden ring-1" },
                 React.createElement("header", { className: "from-slate-800 to-slate-700 flex items-center p-2 pl-3 text-white font-bold bg-gradient-to-r" },
@@ -870,25 +1030,13 @@ i.bi {
                                     setDisplayType("sum");
                                 } }, "\u5408\u8A08"))),
                     React.createElement("div", { className: "grid gap-3 grid-cols-3" },
-                        React.createElement(ResourceCounter, { type: "metal", 
-                            // amount={recorder.Metal}
-                            amount: 0 }),
-                        React.createElement(ResourceCounter, { type: "nutrient", 
-                            // amount={recorder.Nutrient}
-                            amount: 0 }),
-                        React.createElement(ResourceCounter, { type: "power", 
-                            // amount={recorder.Power}
-                            amount: 0 })),
+                        React.createElement(ResourceCounter, { type: "parts", amount: disassembledResource.parts }),
+                        React.createElement(ResourceCounter, { type: "nutrient", amount: disassembledResource.nutrients }),
+                        React.createElement(ResourceCounter, { type: "power", amount: disassembledResource.power })),
                     React.createElement("div", { className: "grid gap-3 grid-cols-3" },
-                        React.createElement(ResourceCounter, { type: "basic_module", 
-                            // amount={recorder.Normal_Module}
-                            amount: 0 }),
-                        React.createElement(ResourceCounter, { type: "advanced_module", 
-                            // amount={recorder.Advanced_Module}
-                            amount: 0 }),
-                        React.createElement(ResourceCounter, { type: "special_module", 
-                            // amount={recorder.Special_Module}
-                            amount: 0 })),
+                        React.createElement(ResourceCounter, { type: "basic_module", amount: disassembledResource.basic_module }),
+                        React.createElement(ResourceCounter, { type: "advanced_module", amount: disassembledResource.advanced_module }),
+                        React.createElement(ResourceCounter, { type: "special_module", amount: disassembledResource.special_module })),
                     React.createElement("div", { className: "flex gap-3" },
                         React.createElement("h2", { className: "font-bold" }, "\u30C9\u30ED\u30C3\u30D7\u8A73\u7D30")),
                     React.createElement("div", { className: "flex gap-2" },
