@@ -189,6 +189,22 @@
         return number + "\uFE0F\u20E3";
     };
 
+    const itemKeyToRank = (itemKey) => {
+        switch (true) {
+            case /_T1$/.test(itemKey):
+                return "B";
+            case /_T2$/.test(itemKey):
+                return "A";
+            case /_T3$/.test(itemKey):
+                return "S";
+            case /_T4$/.test(itemKey):
+                return "SS";
+            // そもそも消耗品などはT1とかで終わらない
+            default:
+                return "";
+        }
+    };
+
     const defaultConfig = {
         features: {
             discordNotification: {
@@ -218,6 +234,7 @@
             },
         },
     };
+    Object.freeze(defaultConfig);
     class Config {
         config;
         constructor() {
@@ -238,12 +255,12 @@
             latestEnterTime: null,
         },
         battleStats: {
-            startTime: null,
+            latestEnterTime: null,
             waveTime: null,
-            endTime: null,
-            totalWaitTime: 0,
+            latestLeaveTime: null,
+            totalWaitingTime: 0,
             totalRoundTime: 0,
-            cycles: 0,
+            lapCount: 0,
             drops: {
                 units: {
                     SS: 0,
@@ -260,10 +277,11 @@
             },
         },
     };
+    Object.freeze(defaultStatus);
     class Status {
         status;
         constructor() {
-            this.status = defaultStatus;
+            this.status = _.cloneDeep(defaultStatus);
         }
         events = mitt();
         set(value) {
@@ -277,19 +295,19 @@
         return (React.createElement("link", { rel: "stylesheet", href: "https://unpkg.com/bootstrap-icons@1.7.1/font/bootstrap-icons.css" }));
     };
 
-    const cn$9 = classNames;
+    const cn$a = classNames;
     const ErrorMessage = ({ children, className }) => {
-        return (React.createElement("span", { className: cn$9("text-red-600 text-sm", className) }, children));
+        return (React.createElement("span", { className: cn$a("text-red-600 text-sm", className) }, children));
     };
 
-    const cn$8 = classNames;
+    const cn$9 = classNames;
     const ExplorationList = () => {
         const exploration = unsafeWindow.LAOPLUS.exploration.sort((a, b) => a.EndTime - b.EndTime);
         const list = exploration.map((exp) => {
             const endDate = dayjs(exp.EndTime * 1000);
             const duration = dayjs.duration(endDate.diff(dayjs()));
             const isFinished = endDate.isSameOrBefore(dayjs());
-            return (React.createElement("div", { key: exp.StageKeyString, className: cn$8("flex gap-3 items-center px-2 py-4 text-gray-800 bg-white rounded-md shadow-md md:px-6 transition-spacing", { "animate-bounce": isFinished }) },
+            return (React.createElement("div", { key: exp.StageKeyString, className: cn$9("flex gap-3 items-center px-2 py-4 text-gray-800 bg-white rounded-md shadow-md md:px-6 transition-spacing", { "animate-bounce": isFinished }) },
                 React.createElement("span", { className: "text-3xl font-bold" }, exp.SquadIndex),
                 React.createElement("div", { className: "flex flex-col" },
                     React.createElement("span", { className: "text-sm" }, humanFriendlyStageKey(exp.StageKeyString)),
@@ -308,7 +326,7 @@
         return React.createElement(React.Fragment, null, list);
     };
 
-    const cn$7 = classNames;
+    const cn$8 = classNames;
     /**
      * ラスオリのボタンっぽいボタン
      * variantのプレビュー: https://user-images.githubusercontent.com/3516343/143912908-65956c55-b60d-4028-82d2-143b08414384.png
@@ -355,12 +373,12 @@
             }
         })();
         return (React.createElement("div", { className: "drop-shadow" },
-            React.createElement("button", { type: "submit", className: cn$7("bg-amber-300 min-w-[6rem] p-3 font-bold leading-none", { rounded: variant === 1 }, className), style: clipStyle }, children)));
+            React.createElement("button", { type: "submit", className: cn$8("bg-amber-300 min-w-[6rem] p-3 font-bold leading-none", { rounded: variant === 1 }, className), style: clipStyle }, children)));
     };
 
-    const cn$6 = classNames;
+    const cn$7 = classNames;
     const FeatureSection = ({ children, hasError }) => {
-        return (React.createElement("details", { className: cn$6("pl-10 rounded shadow border", hasError
+        return (React.createElement("details", { className: cn$7("pl-10 rounded shadow border", hasError
                 ? "border-red-600 shadow-red-300/50"
                 : "border-b-transparent") }, children));
     };
@@ -381,9 +399,9 @@
                 React.createElement("input", { type: "checkbox", className: "w-4 h-4 before:cursor-pointer", ...register }))));
     };
 
-    const cn$5 = classNames;
+    const cn$6 = classNames;
     const FeatureSectionContent = ({ children, enable }) => {
-        return (React.createElement("div", { className: cn$5("flex flex-col gap-2 p-4 pl-0 border-t", {
+        return (React.createElement("div", { className: cn$6("flex flex-col gap-2 p-4 pl-0 border-t", {
                 "opacity-50": !enable,
             }) }, children));
     };
@@ -472,7 +490,7 @@
             } }, "\u901A\u77E5\u30C6\u30B9\u30C8"));
     };
 
-    const cn$4 = classNames;
+    const cn$5 = classNames;
     ReactModal.defaultStyles = {};
     const element = document.createElement("style");
     element.setAttribute("type", "text/tailwindcss");
@@ -552,7 +570,7 @@ i.bi {
                                             React.createElement("label", { className: "flex gap-1 items-center" },
                                                 React.createElement("input", { type: "checkbox", disabled: !watch("features.discordNotification.enabled"), ...register("features.discordNotification.interests.pcDrop") }),
                                                 "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u30C9\u30ED\u30C3\u30D7"),
-                                            React.createElement("div", { className: cn$4("flex gap-3 pl-4 ml-1", {
+                                            React.createElement("div", { className: cn$5("flex gap-3 pl-4 ml-1", {
                                                     "opacity-50": !watch("features.discordNotification.interests.pcDrop"),
                                                 }) },
                                                 React.createElement("label", { className: "flex gap-1 items-center" },
@@ -654,15 +672,15 @@ i.bi {
                         React.createElement(ExplorationList, null))))));
     };
 
-    const cn$3 = classNames;
+    const cn$4 = classNames;
     /**
      * @package
      */
     const Spinner = ({ className, style }) => {
-        return (React.createElement("i", { className: cn$3("bi bi-arrow-repeat", className), style: style }));
+        return (React.createElement("i", { className: cn$4("bi bi-arrow-repeat", className), style: style }));
     };
 
-    const cn$2 = classNames;
+    const cn$3 = classNames;
     /**
      * @package
      */
@@ -679,12 +697,12 @@ i.bi {
         }, []);
         if (targetDate !== null) {
             const duration = dayjs.duration(dayjs(targetDate).diff(dayjs()));
-            return (React.createElement("div", { className: cn$2("text-[10vh]", className) }, duration.format("mm:ss")));
+            return (React.createElement("div", { className: cn$3("text-[10vh]", className) }, duration.format("mm:ss")));
         }
-        return React.createElement("div", { className: cn$2("text-[6vh]", className) }, "WAITING");
+        return React.createElement("div", { className: cn$3("text-[6vh]", className) }, "WAITING");
     };
 
-    const cn$1 = classNames;
+    const cn$2 = classNames;
     const AutorunStatus = () => {
         const config = unsafeWindow.LAOPLUS.config;
         const status = unsafeWindow.LAOPLUS.status;
@@ -701,7 +719,7 @@ i.bi {
         if (!shown) {
             return React.createElement(React.Fragment, null);
         }
-        return (React.createElement("div", { className: cn$1("-translate-x-[50%] absolute inset-y-0 left-0 flex items-center text-white pointer-events-none select-none drop-shadow-lg", enterDate === null ? "opacity-50" : "opacity-90") },
+        return (React.createElement("div", { className: cn$2("-translate-x-[50%] absolute inset-y-0 left-0 flex items-center text-white pointer-events-none select-none drop-shadow-lg", enterDate === null ? "opacity-50" : "opacity-90") },
             React.createElement(Spinner, { className: "text-[70vh] leading-zero animate-spin", style: { animationDuration: "12s" } }),
             React.createElement("div", { className: "pl-[50%] absolute inset-0 flex items-center justify-center" },
                 React.createElement(Timer, { targetDate: enterDate, className: "pt-[60%] rotate-90" }))));
@@ -723,202 +741,6 @@ i.bi {
         // tailwindcss sky-400
         info: chroma.hex("#38BDF8"),
     };
-    const disassemblingTable = {
-        units: {
-            B: {
-                parts: 5,
-                nutrients: 5,
-                power: 5,
-                basic_module: 5,
-                advanced_module: 0,
-                special_module: 0,
-            },
-            A: {
-                parts: 25,
-                nutrients: 25,
-                power: 25,
-                basic_module: 25,
-                advanced_module: 3,
-                special_module: 0,
-            },
-            S: {
-                parts: 50,
-                nutrients: 50,
-                power: 50,
-                basic_module: 50,
-                advanced_module: 10,
-                special_module: 1,
-            },
-            SS: {
-                parts: 100,
-                nutrients: 100,
-                power: 100,
-                basic_module: 100,
-                advanced_module: 20,
-                special_module: 5,
-            },
-        },
-        equipments: {
-            B: {
-                parts: 3,
-                nutrients: 0,
-                power: 3,
-                basic_module: 1,
-                advanced_module: 0,
-                special_module: 0,
-            },
-            A: {
-                parts: 5,
-                nutrients: 0,
-                power: 5,
-                basic_module: 3,
-                advanced_module: 1,
-                special_module: 0,
-            },
-            S: {
-                parts: 10,
-                nutrients: 0,
-                power: 10,
-                basic_module: 5,
-                advanced_module: 2,
-                special_module: 0,
-            },
-            SS: {
-                parts: 20,
-                nutrients: 0,
-                power: 20,
-                basic_module: 10,
-                advanced_module: 3,
-                special_module: 1,
-            },
-        },
-    };
-
-    const itemKeyToRank = (itemKey) => {
-        switch (true) {
-            case /_T1$/.test(itemKey):
-                return "B";
-            case /_T2$/.test(itemKey):
-                return "A";
-            case /_T3$/.test(itemKey):
-                return "S";
-            case /_T4$/.test(itemKey):
-                return "SS";
-            // そもそも消耗品などはT1とかで終わらない
-            default:
-                return "";
-        }
-    };
-
-    const resetRecoder = () => {
-        unsafeWindow.LAOPLUS.status.set({ battleStats: defaultStatus.battleStats });
-    };
-    const enter$2 = () => {
-        const status = unsafeWindow.LAOPLUS.status;
-        const curtime = new Date().getTime();
-        const { endTime, totalWaitTime } = status.status.battleStats;
-        if (endTime) {
-            const waitTime = (curtime - endTime) / 1000;
-            status.set({
-                battleStats: {
-                    startTime: curtime,
-                    totalWaitTime: totalWaitTime + waitTime,
-                },
-            });
-        }
-        else {
-            status.set({
-                battleStats: {
-                    startTime: curtime,
-                },
-            });
-        }
-    };
-    const leave = () => {
-        const status = unsafeWindow.LAOPLUS.status;
-        const curtime = new Date().getTime();
-        const { waveTime, totalRoundTime } = status.status.battleStats;
-        if (waveTime) {
-            const waitTime = (curtime - waveTime) / 1000;
-            status.set({
-                battleStats: {
-                    endTime: curtime,
-                    totalRoundTime: totalRoundTime + waitTime,
-                },
-            });
-        }
-        else {
-            status.set({
-                battleStats: {
-                    endTime: curtime,
-                },
-            });
-        }
-    };
-    /**
-     * @package
-     */
-    const incrementDrops = (res) => {
-        const status = unsafeWindow.LAOPLUS.status;
-        const units = res.ClearRewardInfo.PCRewardList.reduce((unitDrops, unit) => {
-            const rank = gradeToRank(unit.Grade);
-            if (rank === "")
-                return unitDrops;
-            return {
-                ...unitDrops,
-                [rank]: unitDrops[rank] + 1,
-            };
-        }, status.status.battleStats.drops.units);
-        const equipments = res.ClearRewardInfo.ItemRewardList.reduce((equipmentDrops, item) => {
-            const rank = itemKeyToRank(item.ItemKeyString);
-            if (rank === "")
-                return equipmentDrops;
-            return {
-                ...equipmentDrops,
-                [rank]: equipmentDrops[rank] + 1,
-            };
-        }, status.status.battleStats.drops.equipments);
-        status.set({
-            battleStats: { drops: { units, equipments } },
-        });
-    };
-    /**
-     * @package
-     */
-    const incrementCycles = () => {
-        const status = unsafeWindow.LAOPLUS.status;
-        const cycles = status.status.battleStats.cycles + 1;
-        status.set({
-            battleStats: { cycles },
-        });
-    };
-    /**
-     * @package
-     */
-    const updateTimes = () => {
-        const status = unsafeWindow.LAOPLUS.status;
-        // Get timer
-        const curtime = new Date().getTime();
-        const { startTime, waveTime, totalRoundTime } = status.status
-            .battleStats;
-        const newRoundTime = waveTime ?? startTime ?? undefined;
-        if (newRoundTime) {
-            const waitTime = (curtime - newRoundTime) / 1000;
-            status.set({
-                battleStats: {
-                    waveTime: curtime,
-                    totalRoundTime: totalRoundTime + waitTime,
-                },
-            });
-        }
-        else {
-            status.set({
-                battleStats: {
-                    waveTime: curtime,
-                },
-            });
-        }
-    };
 
     const Icon = ({ type }) => {
         const url = (() => {
@@ -938,81 +760,72 @@ i.bi {
                     return base + "/item/module/special.png";
             }
         })();
-        return React.createElement("img", { className: "inline w-6 h-6 object-contain", src: url });
+        return React.createElement("img", { className: "w-full h-full object-contain", src: url });
     };
 
-    // 分解についてのメモ
-    // 分解獲得資源上昇（研究「精密分解施設」, 基地「装備分解室」）で増えるのは部品・栄養・電力のみ
-    // 計算式: 少数切り捨て(1体から得られる量 * 数 * 倍率)
-    /**
-     * 素の分解獲得資源値に自分の分解獲得資源上昇値をかけた値を得る
-     */
-    const calcMultipliedValue = (amount, type) => {
-        // TODO: 設定から倍率を取る
-        /**
-         * ユーザーが実際にゲームで見る数値
-         *
-         * **追加で** xxx%得られるという意味なので使うときは100%分足してかける
-         * @example 150
-         */
-        const rawMultiplier = type === "unit" ? 150 : 185;
-        /**
-         * 計算に使う数値
-         * @example 2.5
-         */
-        const multiplier = rawMultiplier * 0.01 + 1;
-        return Math.trunc(amount * multiplier);
-    };
-    /**
-     * @package
-     */
-    const calcResourcesFromDrops = ({ drops, table, type, }) => {
-        const sumInitialValue = {
-            parts: 0,
-            nutrients: 0,
-            power: 0,
-            basic_module: 0,
-            advanced_module: 0,
-            special_module: 0,
+    const TimeStat = ({ lapCount, totalWaitingTime, totalRoundTime }) => {
+        const [displayTimeType, setDisplayTimeType] = React.useState("lapTime");
+        const toggleDisplayTimeType = () => {
+            setDisplayTimeType((v) => (v === "lapTime" ? "battleTime" : "lapTime"));
         };
-        const ranks = Object.keys(drops);
-        // ランクごとに集計・加算して返す
-        const total = ranks.reduce((sum, rank) => {
-            Object.keys(table).map((key) => {
-                sum[key] = sum[key] + table[rank][key] * drops[rank];
-            });
-            log.debug("BattleStats", type, rank, "倍率かける前", sum);
-            // 部品・栄養・電力のみ 倍率をかける
-            sum.parts = calcMultipliedValue(sum.parts, "unit");
-            sum.nutrients = calcMultipliedValue(sum.nutrients, "unit");
-            sum.power = calcMultipliedValue(sum.power, "unit");
-            log.debug("BattleStats", type, rank, "倍率かけた後", sum);
-            return sum;
-        }, sumInitialValue);
-        log.debug("BattleStats", type, "total", total);
-        return total;
+        const totalTime = totalRoundTime + totalWaitingTime;
+        const lapTimeAverage = lapCount === 0 || totalTime === 0
+            ? "0.0"
+            : (totalTime / lapCount).toFixed(1);
+        const battleTimeAverage = lapCount === 0 || totalTime === 0
+            ? "0.0"
+            : (totalRoundTime / lapCount).toFixed(1);
+        return (React.createElement("dl", { className: "flex" },
+            React.createElement("dt", { className: "mr-auto cursor-pointer select-none" },
+                React.createElement("button", { onClick: toggleDisplayTimeType }, displayTimeType === "lapTime"
+                    ? "平均周回時間"
+                    : "平均戦闘時間")),
+            React.createElement("dd", null,
+                React.createElement("p", { className: "text-gray-900 font-bold" },
+                    React.createElement("span", null, displayTimeType === "lapTime"
+                        ? lapTimeAverage
+                        : battleTimeAverage),
+                    React.createElement("span", { className: "text-gray-500 text-xs font-bold" }, "\u79D2")))));
     };
+    // FIXME: 表示する平均値がブレないようにlapCountが変わったときだけ描画したいので
+    // React.memoのareEqualで判別しているが、本来そういうふうに使ってはいけないらしい。
+    // が、うまく動くので使ってしまう
+    //
+    // > バグを引き起こす可能性があるため、レンダーを「抑止する」ために使用しないでください。
+    // > https://ja.reactjs.org/docs/react-api.html#reactmemo
+    const MemorizedTimeStat = React.memo(TimeStat, (prevProps, nextProps) => {
+        if (prevProps.lapCount !== nextProps.lapCount)
+            return false;
+        return true;
+    });
 
-    classNames;
-    const GridItem = ({ icon, value, average }) => {
-        return (React.createElement("div", { className: "flex gap-1" },
-            icon,
-            React.createElement("div", { className: "flex flex-col" },
-                React.createElement("span", null, value),
-                React.createElement("span", { className: "text-gray-600" }, average))));
+    const cn$1 = classNames;
+    function jsonEqual(a, b) {
+        return JSON.stringify(a) === JSON.stringify(b);
+    }
+    function resetRecoder() {
+        const d = defaultStatus.battleStats;
+        log.log("resetRecoder", "default", d);
+        unsafeWindow.LAOPLUS.status.set({
+            battleStats: { ...d },
+        });
+    }
+    const ResourceCounter = ({ type, amount }) => {
+        return (React.createElement("div", { className: "flex gap-2 items-center" },
+            type === "B" || type === "A" || type === "S" || type === "SS" ? (React.createElement("div", { className: cn$1("flex-shrink-0 px-2 rounded-md font-bold ring-1 ring-gray-900/5", `bg-[${rankColor[type].hex()}]`, type === "SS" ? "text-black" : "text-white") }, type)) : (React.createElement("div", { className: "flex-shrink-0 w-6 h-6" },
+                React.createElement(Icon, { type: type }))),
+            React.createElement("hr", { className: "h-[2px] w-full bg-gray-200 border-0 rounded-full" }),
+            React.createElement("span", { className: "text-gray-900 font-bold" }, amount.toLocaleString())));
     };
     const BattleStats = () => {
         const status = unsafeWindow.LAOPLUS.status;
-        const [stat, setStat] = React.useState({
+        const [stats, setStats] = React.useState({
             ...status.status.battleStats,
         });
         status.events.on("changed", (e) => {
-            setStat((old) => {
-                if (_.isEqual(old, e.battleStats)) {
-                    return {
-                        ...e.battleStats,
-                    };
-                }
+            setStats((old) => {
+                if (!jsonEqual(old, e.battleStats))
+                    return { ...e.battleStats };
                 return old;
             });
         });
@@ -1020,75 +833,78 @@ i.bi {
         const handleButtonClick = () => {
             setShowPanel((v) => !v);
         };
-        const disassemblingMultiplier = 2.5;
-        const totalTime = stat.totalRoundTime + stat.totalWaitTime;
-        const calcAverage = (value) => {
-            return ((value * disassemblingMultiplier * 3600) / totalTime).toFixed(2);
+        const [displayType, setDisplayType] = React.useState("sum");
+        const toggleCheckState = () => {
+            setDisplayType((v) => (v === "sum" ? "perHour" : "sum"));
         };
-        const disassembledResource = (() => {
-            log.log("BattleStats", "calc disassembledResource");
-            const drops = status.status.battleStats.drops;
-            const unitResorces = calcResourcesFromDrops({
-                drops: drops.units,
-                table: disassemblingTable.units,
-                type: "units",
-            });
-            log.log("BattleStats", "disassembledResource", "unitResorces", unitResorces);
-            const equipmentResources = calcResourcesFromDrops({
-                drops: drops.equipments,
-                table: disassemblingTable.equipments,
-                type: "equipments",
-            });
-            log.log("BattleStats", "disassembledResource", "equipmentResources", equipmentResources);
-            const total = {
-                parts: unitResorces.parts + equipmentResources.parts,
-                nutrients: unitResorces.nutrients + equipmentResources.nutrients,
-                power: unitResorces.power + equipmentResources.power,
-                basic_module: unitResorces.basic_module + equipmentResources.basic_module,
-                advanced_module: unitResorces.advanced_module +
-                    equipmentResources.advanced_module,
-                special_module: unitResorces.special_module + equipmentResources.special_module,
-            };
-            log.log("BattleStats", "disassembledResource", "total", total);
-            return total;
-        })();
-        const averageBattleTime = (stat.totalRoundTime / stat.cycles).toFixed(2);
-        const totalBattleTime = stat.totalRoundTime.toFixed(2);
-        const averageWaitingTime = (stat.totalWaitTime / stat.cycles).toFixed(2);
-        const totalWaitingTime = stat.totalWaitTime.toFixed(2);
-        const averageCycleTime = (totalTime / stat.cycles).toFixed(2);
-        const totalCycleTime = totalTime.toFixed(2);
         return (React.createElement("div", { className: "relative" },
-            React.createElement("button", { onClick: handleButtonClick, title: "\u6226\u95D8\u60C5\u5831\u30D1\u30CD\u30EB\u3092\u8868\u793A\u3059\u308B", className: "h-6 text-white drop-shadow-featureIcon" },
+            React.createElement("button", { onClick: handleButtonClick, title: "\u5468\u56DE\u60C5\u5831\u30D1\u30CD\u30EB\u3092\u8868\u793A\u3059\u308B", className: "h-6 text-white drop-shadow-featureIcon" },
                 React.createElement("i", { className: "bi bi-recycle" })),
-            showPanel && (React.createElement("div", { className: "min-w-[300px] absolute bottom-6 left-0 mb-1 p-4 bg-gray-50 rounded shadow-md" },
-                React.createElement("table", null,
-                    React.createElement("tr", null,
-                        React.createElement("th", null),
-                        React.createElement("th", null, "\u5E73\u5747"),
-                        React.createElement("th", null, "\u5408\u8A08")),
-                    React.createElement("tr", null,
-                        React.createElement("th", null, "\u6226\u95D8\u6642\u9593"),
-                        React.createElement("td", null, averageBattleTime),
-                        React.createElement("td", null, totalBattleTime)),
-                    React.createElement("tr", null,
-                        React.createElement("th", null, "\u5F85\u6A5F\u6642\u9593"),
-                        React.createElement("td", null, averageWaitingTime),
-                        React.createElement("td", null, totalWaitingTime)),
-                    React.createElement("tr", null,
-                        React.createElement("th", null, "\u6226\u95D8+\u5F85\u6A5F\u6642\u9593"),
-                        React.createElement("td", null, averageCycleTime),
-                        React.createElement("td", null, totalCycleTime))),
-                "\u5B8C\u4E86\u3057\u305F\u6226\u95D8\u6570:",
-                React.createElement("div", { className: "text-emerald-300 inline-block" }, stat.cycles),
-                React.createElement("button", { className: "bg-amber-300 ml-1 p-1 text-black font-bold", onClick: resetRecoder }, "\u30EA\u30BB\u30C3\u30C8"),
-                React.createElement("div", { className: "grid gap-1 grid-cols-3 grid-rows-2" },
-                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "metal" }), value: disassembledResource.parts, average: calcAverage(disassembledResource.parts) }),
-                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "nutrient" }), value: disassembledResource.nutrients, average: calcAverage(disassembledResource.nutrients) }),
-                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "power" }), value: disassembledResource.power, average: calcAverage(disassembledResource.power) }),
-                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "basic_module" }), value: disassembledResource.basic_module, average: calcAverage(disassembledResource.basic_module) }),
-                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "advanced_module" }), value: disassembledResource.advanced_module, average: calcAverage(disassembledResource.advanced_module) }),
-                    React.createElement(GridItem, { icon: React.createElement(Icon, { type: "special_module" }), value: disassembledResource.special_module, average: calcAverage(disassembledResource.special_module) }))))));
+            showPanel && (React.createElement("div", { className: "w-[420px] ring-gray-900/5 absolute bottom-6 left-0 mb-1 rounded-lg shadow-xl overflow-hidden ring-1" },
+                React.createElement("header", { className: "from-slate-800 to-slate-700 flex items-center p-2 pl-3 text-white font-bold bg-gradient-to-r" },
+                    React.createElement("h1", { className: "flex gap-2 items-center mr-auto" },
+                        React.createElement("i", { className: "bi bi-info-circle text-lg" }),
+                        "\u5468\u56DE\u60C5\u5831"),
+                    React.createElement("div", { className: "flex gap-2 items-center" },
+                        React.createElement("button", { className: "bg-amber-300 flex gap-1 items-center px-2 py-1 text-gray-900 font-bold rounded shadow", onClick: resetRecoder },
+                            React.createElement("i", { className: "bi bi-stopwatch-fill inline w-4" }),
+                            "\u30EA\u30BB\u30C3\u30C8"))),
+                React.createElement("main", { className: "flex flex-col gap-4 px-4 py-5 bg-white" },
+                    React.createElement("div", { className: "grid gap-4 grid-cols-2" },
+                        React.createElement(MemorizedTimeStat, { ...stats }),
+                        React.createElement("dl", { className: "flex" },
+                            React.createElement("dt", { className: "mr-auto" }, "\u5B8C\u4E86\u3057\u305F\u5468\u56DE\u6570"),
+                            React.createElement("dd", null,
+                                React.createElement("p", { className: "text-gray-900 font-bold" }, stats.lapCount.toLocaleString())))),
+                    React.createElement("hr", null),
+                    React.createElement("div", { className: "flex gap-3" },
+                        React.createElement("h2", { className: "font-bold" }, "\u53D6\u5F97\u8CC7\u6E90"),
+                        React.createElement("div", { className: "flex gap-1 items-center ml-auto cursor-pointer select-none" },
+                            React.createElement("span", { onClick: () => {
+                                    setDisplayType("perHour");
+                                } }, "\u6642\u7D66"),
+                            React.createElement("div", { className: "flex items-center px-1 w-10 h-5 bg-gray-300 rounded-full", onClick: toggleCheckState },
+                                React.createElement("div", { className: cn$1("w-4 h-4 bg-white rounded-full shadow-md transform transition-transform", displayType === "sum" &&
+                                        "translate-x-4") })),
+                            React.createElement("span", { onClick: () => {
+                                    setDisplayType("sum");
+                                } }, "\u5408\u8A08"))),
+                    React.createElement("div", { className: "grid gap-3 grid-cols-3" },
+                        React.createElement(ResourceCounter, { type: "metal", 
+                            // amount={recorder.Metal}
+                            amount: 0 }),
+                        React.createElement(ResourceCounter, { type: "nutrient", 
+                            // amount={recorder.Nutrient}
+                            amount: 0 }),
+                        React.createElement(ResourceCounter, { type: "power", 
+                            // amount={recorder.Power}
+                            amount: 0 })),
+                    React.createElement("div", { className: "grid gap-3 grid-cols-3" },
+                        React.createElement(ResourceCounter, { type: "basic_module", 
+                            // amount={recorder.Normal_Module}
+                            amount: 0 }),
+                        React.createElement(ResourceCounter, { type: "advanced_module", 
+                            // amount={recorder.Advanced_Module}
+                            amount: 0 }),
+                        React.createElement(ResourceCounter, { type: "special_module", 
+                            // amount={recorder.Special_Module}
+                            amount: 0 })),
+                    React.createElement("div", { className: "flex gap-3" },
+                        React.createElement("h2", { className: "font-bold" }, "\u30C9\u30ED\u30C3\u30D7\u8A73\u7D30")),
+                    React.createElement("div", { className: "flex gap-2" },
+                        React.createElement("i", { className: "bi bi-person-fill text-xl", title: "\u6226\u95D8\u54E1" }),
+                        React.createElement("div", { className: "grid flex-1 gap-3 grid-cols-4" },
+                            React.createElement(ResourceCounter, { type: "B", amount: stats.drops.units.B }),
+                            React.createElement(ResourceCounter, { type: "A", amount: stats.drops.units.A }),
+                            React.createElement(ResourceCounter, { type: "S", amount: stats.drops.units.S }),
+                            React.createElement(ResourceCounter, { type: "SS", amount: stats.drops.units.SS }))),
+                    React.createElement("div", { className: "flex gap-2" },
+                        React.createElement("i", { className: "bi bi-cpu text-xl", title: "\u88C5\u5099" }),
+                        React.createElement("div", { className: "grid flex-1 gap-3 grid-cols-4" },
+                            React.createElement(ResourceCounter, { type: "B", amount: stats.drops.equipments.B }),
+                            React.createElement(ResourceCounter, { type: "A", amount: stats.drops.equipments.A }),
+                            React.createElement(ResourceCounter, { type: "S", amount: stats.drops.equipments.S }),
+                            React.createElement(ResourceCounter, { type: "SS", amount: stats.drops.equipments.SS }))))))));
     };
 
     const cn = classNames;
@@ -1101,9 +917,10 @@ i.bi {
         const handleClick = () => {
             config.set({ features: { autorunDetection: { enabled: !enabled } } });
         };
-        return (React.createElement("button", { onClick: handleClick, title: `自動周回停止判定を${enabled ? "オフ" : "オン"}にする`, className: cn("text-white drop-shadow-featureIcon h-6", enabled && "animate-spin"), style: {
+        return (React.createElement("button", { onClick: handleClick, title: `自動周回停止判定を${enabled ? "オフ" : "オン"}にする`, className: cn("text-white drop-shadow", enabled && "animate-spin"), style: {
                 animationDuration: "2s",
                 animationTimingFunction: "ease-in-out",
+                filter: "drop-shadow(0 0 0.1em black)",
             } },
             React.createElement("i", { className: "bi bi-arrow-repeat" })));
     };
@@ -1189,7 +1006,7 @@ i.bi {
     /**
      * @package
      */
-    const enter$1 = ({ EnterInfo }) => {
+    const enter$2 = ({ EnterInfo }) => {
         const msToFinish = EnterInfo.EndTime * 1000 - Date.now();
         const timeoutID = window.setTimeout(sendNotification$1, msToFinish);
         unsafeWindow.LAOPLUS.exploration.push({ ...EnterInfo, timeoutID });
@@ -1221,7 +1038,7 @@ i.bi {
                 loginto(res);
                 return;
             case "/exploration_enter":
-                enter$1(res);
+                enter$2(res);
                 return;
             case "/exploration_reward":
                 reward(res);
@@ -1364,7 +1181,7 @@ i.bi {
     /**
      * @package
      */
-    const enter = () => {
+    const enter$1 = () => {
         const status = unsafeWindow.LAOPLUS.status;
         const { enterTimerId } = status.status.autorunDetection;
         if (enterTimerId !== null) {
@@ -1387,24 +1204,126 @@ i.bi {
             case "/battleserver_enter":
                 if (unsafeWindow.LAOPLUS.config.config.features.autorunDetection
                     .enabled) {
-                    enter();
+                    enter$1();
                 }
                 return;
+        }
+    };
+
+    /**
+     * @package
+     */
+    const enter = () => {
+        const status = unsafeWindow.LAOPLUS.status;
+        const curtime = new Date().getTime();
+        const { latestLeaveTime, totalWaitingTime } = status.status.battleStats;
+        if (latestLeaveTime) {
+            const waitTime = (curtime - latestLeaveTime) / 1000;
+            status.set({
+                battleStats: {
+                    latestEnterTime: curtime,
+                    totalWaitingTime: totalWaitingTime + waitTime,
+                },
+            });
+        }
+        else {
+            status.set({
+                battleStats: {
+                    latestEnterTime: curtime,
+                },
+            });
+        }
+    };
+    /**
+     * @package
+     */
+    const leave = () => {
+        const status = unsafeWindow.LAOPLUS.status;
+        const curtime = new Date().getTime();
+        const { waveTime, totalRoundTime, lapCount } = status.status.battleStats;
+        if (waveTime) {
+            const waitTime = (curtime - waveTime) / 1000;
+            status.set({
+                battleStats: {
+                    latestLeaveTime: curtime,
+                    totalRoundTime: totalRoundTime + waitTime,
+                    lapCount: lapCount + 1,
+                },
+            });
+        }
+        else {
+            status.set({
+                battleStats: {
+                    latestLeaveTime: curtime,
+                    lapCount: lapCount + 1,
+                },
+            });
+        }
+    };
+    /**
+     * @package
+     */
+    const incrementDrops = (res) => {
+        const status = unsafeWindow.LAOPLUS.status;
+        const units = res.ClearRewardInfo.PCRewardList.reduce((unitDrops, unit) => {
+            const rank = gradeToRank(unit.Grade);
+            if (rank === "")
+                return unitDrops;
+            return {
+                ...unitDrops,
+                [rank]: unitDrops[rank] + 1,
+            };
+        }, status.status.battleStats.drops.units);
+        const equipments = res.ClearRewardInfo.ItemRewardList.reduce((equipmentDrops, item) => {
+            const rank = itemKeyToRank(item.ItemKeyString);
+            if (rank === "")
+                return equipmentDrops;
+            return {
+                ...equipmentDrops,
+                [rank]: equipmentDrops[rank] + 1,
+            };
+        }, status.status.battleStats.drops.equipments);
+        status.set({
+            battleStats: { drops: { units, equipments } },
+        });
+    };
+    /**
+     * @package
+     */
+    const calcResource = () => {
+        const status = unsafeWindow.LAOPLUS.status;
+        const curtime = new Date().getTime();
+        const { latestEnterTime, waveTime, totalRoundTime } = status.status.battleStats;
+        const newRoundTime = waveTime ?? latestEnterTime ?? undefined;
+        if (newRoundTime) {
+            const waitTime = (curtime - newRoundTime) / 1000;
+            status.set({
+                battleStats: {
+                    waveTime: curtime,
+                    totalRoundTime: totalRoundTime + waitTime,
+                },
+            });
+        }
+        else {
+            status.set({
+                battleStats: {
+                    waveTime: curtime,
+                },
+            });
         }
     };
 
     const invoke = ({ res, url }) => {
         switch (url.pathname) {
             case "/battleserver_enter":
-                enter$2();
+                enter();
                 return;
             case "/battleserver_leave":
                 leave();
-                incrementCycles();
                 return;
             case "/wave_clear":
                 incrementDrops(res);
-                updateTimes();
+                calcResource();
                 return;
         }
     };
@@ -1512,9 +1431,6 @@ i.bi {
                 },
                 lineHeight: {
                     zero: "0",
-                },
-                dropShadow: {
-                    featureIcon: "0 0 0.1em black",
                 },
             },
         },
