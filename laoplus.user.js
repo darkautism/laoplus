@@ -868,7 +868,7 @@ i.bi {
                 sum[key] += income[key];
             });
             return sum;
-        }, sumInitialValue);
+        }, { ...sumInitialValue });
         log.debug("BattleStats", type, "total", total);
         return total;
     };
@@ -998,7 +998,7 @@ i.bi {
             return total;
         })();
         return (React.createElement("div", { className: "relative" },
-            React.createElement("button", { onClick: handleButtonClick, title: "\u5468\u56DE\u60C5\u5831\u30D1\u30CD\u30EB\u3092\u8868\u793A\u3059\u308B", className: "drop-shadow-featureIcon h-6 text-white" },
+            React.createElement("button", { onClick: handleButtonClick, title: "\u5468\u56DE\u60C5\u5831\u30D1\u30CD\u30EB\u3092\u8868\u793A\u3059\u308B", className: "h-6 text-white drop-shadow-featureIcon" },
                 React.createElement("i", { className: "bi bi-recycle" })),
             showPanel && (React.createElement("div", { className: "w-[420px] ring-gray-900/5 absolute bottom-6 left-0 mb-1 rounded-lg shadow-xl overflow-hidden ring-1" },
                 React.createElement("header", { className: "from-slate-800 to-slate-700 flex items-center p-2 pl-3 text-white font-bold bg-gradient-to-r" },
@@ -1017,18 +1017,19 @@ i.bi {
                             React.createElement("dd", null,
                                 React.createElement("p", { className: "text-gray-900 font-bold" }, stats.lapCount.toLocaleString())))),
                     React.createElement("hr", null),
-                    React.createElement("div", { className: "flex gap-3" },
-                        React.createElement("h2", { className: "font-bold" }, "\u53D6\u5F97\u8CC7\u6E90"),
-                        React.createElement("div", { className: "flex gap-1 items-center ml-auto cursor-pointer select-none" },
-                            React.createElement("span", { onClick: () => {
-                                    setDisplayType("perHour");
-                                } }, "\u6642\u7D66"),
-                            React.createElement("div", { className: "flex items-center px-1 w-10 h-5 bg-gray-300 rounded-full", onClick: toggleCheckState },
-                                React.createElement("div", { className: cn$1("w-4 h-4 bg-white rounded-full shadow-md transform transition-transform", displayType === "sum" &&
-                                        "translate-x-4") })),
-                            React.createElement("span", { onClick: () => {
-                                    setDisplayType("sum");
-                                } }, "\u5408\u8A08"))),
+                    React.createElement("div", { className: "hidden" },
+                        React.createElement("div", { className: "flex gap-3" },
+                            React.createElement("h2", { className: "font-bold" }, "\u53D6\u5F97\u8CC7\u6E90"),
+                            React.createElement("div", { className: "flex gap-1 items-center ml-auto cursor-pointer select-none" },
+                                React.createElement("span", { onClick: () => {
+                                        setDisplayType("perHour");
+                                    } }, "\u6642\u7D66"),
+                                React.createElement("div", { className: "flex items-center px-1 w-10 h-5 bg-gray-300 rounded-full", onClick: toggleCheckState },
+                                    React.createElement("div", { className: cn$1("w-4 h-4 bg-white rounded-full shadow-md transform transition-transform", displayType === "sum" &&
+                                            "translate-x-4") })),
+                                React.createElement("span", { onClick: () => {
+                                        setDisplayType("sum");
+                                    } }, "\u5408\u8A08")))),
                     React.createElement("div", { className: "grid gap-3 grid-cols-3" },
                         React.createElement(ResourceCounter, { type: "parts", amount: disassembledResource.parts }),
                         React.createElement(ResourceCounter, { type: "nutrient", amount: disassembledResource.nutrients }),
@@ -1065,10 +1066,9 @@ i.bi {
         const handleClick = () => {
             config.set({ features: { autorunDetection: { enabled: !enabled } } });
         };
-        return (React.createElement("button", { onClick: handleClick, title: `自動周回停止判定を${enabled ? "オフ" : "オン"}にする`, className: cn("text-white drop-shadow", enabled && "animate-spin"), style: {
+        return (React.createElement("button", { onClick: handleClick, title: `自動周回停止判定を${enabled ? "オフ" : "オン"}にする`, className: cn("text-white drop-shadow-featureIcon h-6", enabled && "animate-spin"), style: {
                 animationDuration: "2s",
                 animationTimingFunction: "ease-in-out",
-                filter: "drop-shadow(0 0 0.1em black)",
             } },
             React.createElement("i", { className: "bi bi-arrow-repeat" })));
     };
@@ -1579,6 +1579,9 @@ i.bi {
                 },
                 lineHeight: {
                     zero: "0",
+                },
+                dropShadow: {
+                    featureIcon: "0 0 0.1em black",
                 },
             },
         },
