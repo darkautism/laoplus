@@ -964,24 +964,29 @@ i.bi {
         const handleButtonClick = () => {
             setShowPanel((v) => !v);
         };
-        const [displayType, setDisplayType] = React.useState("sum");
-        const toggleCheckState = () => {
-            setDisplayType((v) => (v === "sum" ? "perHour" : "sum"));
+        const [resourceDisplayType, setResourceDisplayType] = React.useState("sum");
+        const toggleResourceDisplayType = () => {
+            setResourceDisplayType((v) => (v === "sum" ? "perHour" : "sum"));
+        };
+        // TODO: 命名なんとかする
+        const [shownResourceTypePerDropKinds, setShownResourceTypePerDropKinds] = React.useState("total");
+        const cycleShownResourceTypePerDropKinds = () => {
+            setShownResourceTypePerDropKinds((v) => v === "total" ? "units" : v === "units" ? "equipments" : "total");
         };
         const disassembledResource = (() => {
-            const unitResorces = calcResourcesFromDrops({
+            const units = calcResourcesFromDrops({
                 drops: stats.drops.units,
                 table: disassemblingTable.units,
                 type: "units",
             });
-            log.log("BattleStats", "disassembledResource", "unitResorces", unitResorces);
-            const equipmentResources = calcResourcesFromDrops({
+            log.log("BattleStats", "disassembledResource", "units", units);
+            const equipments = calcResourcesFromDrops({
                 drops: stats.drops.equipments,
                 table: disassemblingTable.equipments,
                 type: "equipments",
             });
-            log.log("BattleStats", "disassembledResource", "equipmentResources", equipmentResources);
-            const total = [unitResorces, equipmentResources].reduce((sum, resources) => {
+            log.log("BattleStats", "disassembledResource", "equipments", equipments);
+            const total = [units, equipments].reduce((sum, resources) => {
                 Object.keys(resources).forEach((key) => {
                     sum[key] = sum[key] + resources[key];
                 });
@@ -995,7 +1000,11 @@ i.bi {
                 special_module: 0,
             });
             log.log("BattleStats", "disassembledResource", "total", total);
-            return total;
+            return {
+                total,
+                units,
+                equipments,
+            };
         })();
         return (React.createElement("div", { className: "relative" },
             React.createElement("button", { onClick: handleButtonClick, title: "\u5468\u56DE\u60C5\u5831\u30D1\u30CD\u30EB\u3092\u8868\u793A\u3059\u308B", className: "h-6 text-white drop-shadow-featureIcon" },
@@ -1017,39 +1026,52 @@ i.bi {
                             React.createElement("dd", null,
                                 React.createElement("p", { className: "text-gray-900 font-bold" }, stats.lapCount.toLocaleString())))),
                     React.createElement("hr", null),
-                    React.createElement("div", { className: "hidden" },
-                        React.createElement("div", { className: "flex gap-3" },
-                            React.createElement("h2", { className: "font-bold" }, "\u53D6\u5F97\u8CC7\u6E90"),
+                    React.createElement("div", { className: "flex gap-3" },
+                        React.createElement("h2", { className: "font-bold cursor-pointer select-none", onClick: cycleShownResourceTypePerDropKinds },
+                            "\u53D6\u5F97\u8CC7\u6E90",
+                            (() => {
+                                switch (shownResourceTypePerDropKinds) {
+                                    case "units":
+                                        return "（戦闘員）";
+                                    case "equipments":
+                                        return "（装備）";
+                                    default:
+                                        return "";
+                                }
+                            })()),
+                        React.createElement("div", { className: "hidden" },
                             React.createElement("div", { className: "flex gap-1 items-center ml-auto cursor-pointer select-none" },
                                 React.createElement("span", { onClick: () => {
-                                        setDisplayType("perHour");
+                                        setResourceDisplayType("perHour");
                                     } }, "\u6642\u7D66"),
-                                React.createElement("div", { className: "flex items-center px-1 w-10 h-5 bg-gray-300 rounded-full", onClick: toggleCheckState },
-                                    React.createElement("div", { className: cn$1("w-4 h-4 bg-white rounded-full shadow-md transform transition-transform", displayType === "sum" &&
+                                React.createElement("div", { className: "flex items-center px-1 w-10 h-5 bg-gray-300 rounded-full", onClick: toggleResourceDisplayType },
+                                    React.createElement("div", { className: cn$1("w-4 h-4 bg-white rounded-full shadow-md transform transition-transform", resourceDisplayType === "sum" &&
                                             "translate-x-4") })),
                                 React.createElement("span", { onClick: () => {
-                                        setDisplayType("sum");
+                                        setResourceDisplayType("sum");
                                     } }, "\u5408\u8A08")))),
                     React.createElement("div", { className: "grid gap-3 grid-cols-3" },
-                        React.createElement(ResourceCounter, { type: "parts", amount: disassembledResource.parts }),
-                        React.createElement(ResourceCounter, { type: "nutrient", amount: disassembledResource.nutrients }),
-                        React.createElement(ResourceCounter, { type: "power", amount: disassembledResource.power })),
+                        React.createElement(ResourceCounter, { type: "parts", amount: disassembledResource[shownResourceTypePerDropKinds].parts }),
+                        React.createElement(ResourceCounter, { type: "nutrient", amount: disassembledResource[shownResourceTypePerDropKinds].nutrients }),
+                        React.createElement(ResourceCounter, { type: "power", amount: disassembledResource[shownResourceTypePerDropKinds].power })),
                     React.createElement("div", { className: "grid gap-3 grid-cols-3" },
-                        React.createElement(ResourceCounter, { type: "basic_module", amount: disassembledResource.basic_module }),
-                        React.createElement(ResourceCounter, { type: "advanced_module", amount: disassembledResource.advanced_module }),
-                        React.createElement(ResourceCounter, { type: "special_module", amount: disassembledResource.special_module })),
+                        React.createElement(ResourceCounter, { type: "basic_module", amount: disassembledResource[shownResourceTypePerDropKinds].basic_module }),
+                        React.createElement(ResourceCounter, { type: "advanced_module", amount: disassembledResource[shownResourceTypePerDropKinds].advanced_module }),
+                        React.createElement(ResourceCounter, { type: "special_module", amount: disassembledResource[shownResourceTypePerDropKinds].special_module })),
                     React.createElement("div", { className: "flex gap-3" },
                         React.createElement("h2", { className: "font-bold" }, "\u30C9\u30ED\u30C3\u30D7\u8A73\u7D30")),
                     React.createElement("div", { className: "flex gap-2" },
                         React.createElement("i", { className: "bi bi-person-fill text-xl", title: "\u6226\u95D8\u54E1" }),
-                        React.createElement("div", { className: "grid flex-1 gap-3 grid-cols-4" },
+                        React.createElement("div", { className: cn$1("grid gap-3 grid-cols-4 flex-1 transition-opacity", shownResourceTypePerDropKinds ===
+                                "equipments" && "opacity-50") },
                             React.createElement(ResourceCounter, { type: "B", amount: stats.drops.units.B }),
                             React.createElement(ResourceCounter, { type: "A", amount: stats.drops.units.A }),
                             React.createElement(ResourceCounter, { type: "S", amount: stats.drops.units.S }),
                             React.createElement(ResourceCounter, { type: "SS", amount: stats.drops.units.SS }))),
                     React.createElement("div", { className: "flex gap-2" },
                         React.createElement("i", { className: "bi bi-cpu text-xl", title: "\u88C5\u5099" }),
-                        React.createElement("div", { className: "grid flex-1 gap-3 grid-cols-4" },
+                        React.createElement("div", { className: cn$1("grid gap-3 grid-cols-4 flex-1 transition-opacity", shownResourceTypePerDropKinds === "units" &&
+                                "opacity-50") },
                             React.createElement(ResourceCounter, { type: "B", amount: stats.drops.equipments.B }),
                             React.createElement(ResourceCounter, { type: "A", amount: stats.drops.equipments.A }),
                             React.createElement(ResourceCounter, { type: "S", amount: stats.drops.equipments.S }),
